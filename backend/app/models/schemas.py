@@ -100,3 +100,31 @@ class BackupSnapshotResponse(BaseModel):
 class BackupHistoryResponse(BaseModel):
     snapshots: List[BackupSnapshotResponse]
     total: int
+
+
+class ArchiveVerificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    valid: bool
+    format_version: Optional[str] = None
+    generator: Optional[str] = None
+    exported_at: Optional[str] = None
+    total_files: int = 0
+    total_versions: int = 0
+    total_bytes: int = 0
+    total_readable: str = "0 B"
+    errors: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+
+class ArchiveRestoreResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    success: bool
+    message: str
+    conflict_strategy: str
+    imported_files_count: int
+    imported_versions_count: int
+    skipped_files_count: int
+    details: List[str] = Field(default_factory=list)
+

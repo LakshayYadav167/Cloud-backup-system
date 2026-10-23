@@ -106,3 +106,15 @@ gantt
 - [x] Created standalone Windows PowerShell smoke test workflow (`scripts/smoke-test.ps1`) for live server validation without mutating user data or persistent databases.
 - [x] Security and reliability review: verified path traversal boundaries, Windows reserved name sanitization, payload size limits, CORS restrictions, and localhost port bindings.
 - [x] Documentation updates: detailed PowerShell workflows, local and Floci modes, backup semantics and limitations, troubleshooting guide, and accurate Jenkins execution status in `README.md`.
+
+---
+
+### Phase 7: Independently Restorable Backup Archives (Completed)
+- [x] Architecture design: implemented portable backup archive specification using Python standard library (`zipfile`, `hashlib`, `json`) with root `manifest.json` (v1.0.0) and uncompressed/compressed raw binary payloads in `blobs/{version_id}_{safe_filename}`.
+- [x] Archive export service (`GET/POST /api/v1/archives/export`): bundles active files and complete historical versions, generates cryptographic SHA-256 hashes, safe relative paths, and metadata. Policy on missing blobs: explicitly raises `409 Conflict` rather than silently omitting required files.
+- [x] Archive verification service (`POST /api/v1/archives/verify`): dry-run inspection validating ZIP limits (100 MB archive size, 250 MB uncompressed size, 1,000 max entries, 100:1 max ratio), rejecting path traversal and Windows reserved device names, checking format version, and recalculating SHA-256 checksums of every payload blob without mutating system state.
+- [x] Archive restore service (`POST /api/v1/archives/restore`): pre-verifies archive integrity, generates new isolated internal system UUIDs and storage keys (never trusts archive identifiers), restores files via the configured `StorageProvider` abstraction layer (supporting local disk and Floci S3), and handles filename collisions via user-selected conflict strategies (`rename` [default], `skip`, `replace`). Storage rollback on database failures.
+- [x] Full automated test coverage (`backend/tests/test_archives.py`): 9 automated tests verifying multi-version export, checksum verification, corrupted blob detection, path traversal rejection, Windows reserved name rejection, 409 missing source object failure, isolated environment recovery, collision strategies (`rename` & `skip`), and coexistence with Phase 2 snapshot manifests.
+- [x] Frontend dashboard integration (`frontend/src/components/BackupSnapshots.tsx`): added "Portable Archives (.zip)" sub-view with Export Archive, Verify Archive inspection card, and Restore Archive card with conflict selector, safety confirmation, and reactive state sync. Added 5 Vitest tests (`frontend/tests/BackupArchives.test.tsx`).
+- [x] Complete zero-budget compliance: ₹0 budget maintained, standard library implementation, no paid cloud services, and preserved existing SQLite snapshots and file management untouched.
+

@@ -4,6 +4,8 @@
  */
 
 import {
+  ArchiveRestoreResponse,
+  ArchiveVerificationResponse,
   BackupHistoryResponse,
   BackupSnapshot,
   FileDeleteResponse,
@@ -176,4 +178,65 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/backups/history?${params.toString()}`);
     return handleResponse<BackupHistoryResponse>(res);
   },
+
+  /**
+   * Export portable backup archive as a downloadable ZIP
+   */
+  async exportArchive(notes?: string): Promise<void> {
+    const params = new URLSearchParams();
+    if (notes && notes.trim()) {
+      params.append('notes', notes.trim());
+    }
+    const res = await fetch(`${API_BASE_URL}/archives/export?${params.toString()}`);
+    if (!res.ok) {
+      await handleResponse(res);
+      return;
+    }
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+
+    let filename = `backup_archive_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+    const disposition = res.headers.get('content-disposition');
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) {
+        filename = match[1];
+      }
+    }
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+  },
+
+  /**
+   * Verify an uploaded backup archive (.zip) integrity without importing
+   */
+  async verifyArchive(file: File): Promise<ArchiveVerificationResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE_URL}/archives/verify`, {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse<ArchiveVerificationResponse>(res);
+  },
+
+  /**
+   * Restore/import an archive into the system with specified collision strategy
+   */
+  async restoreArchive(file: File, conflictStrategy: string = 'rename'): Promise<ArchiveRestoreResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('conflict_strategy', conflictStrategy);
+    const res = await fetch(`${API_BASE_URL}/archives/restore`, {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse<ArchiveRestoreResponse>(res);
+  },
 };
+

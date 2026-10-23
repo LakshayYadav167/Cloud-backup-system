@@ -100,3 +100,27 @@ export interface ToastMessage {
   title: string;
   message?: string;
 }
+
+export interface ArchiveVerificationResponse {
+  valid: boolean;
+  format_version?: string | null;
+  generator?: string | null;
+  exported_at?: string | null;
+  total_files: number;
+  total_versions: number;
+  total_bytes: number;
+  total_readable: string;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ArchiveRestoreResponse {
+  success: boolean;
+  message: string;
+  conflict_strategy: string;
+  imported_files_count: number;
+  imported_versions_count: number;
+  skipped_files_count: number;
+  details: string[];
+}
+

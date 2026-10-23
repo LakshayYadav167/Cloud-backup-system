@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.db.database import init_db
 from app.routers import (
+    archives_router,
     backups_router,
     files_router,
     health_router,
@@ -71,6 +72,7 @@ app.include_router(health_router, prefix="/api/v1")
 app.include_router(files_router, prefix="/api/v1")
 app.include_router(storage_router, prefix="/api/v1")
 app.include_router(backups_router, prefix="/api/v1")
+app.include_router(archives_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Root"])
@@ -88,6 +90,9 @@ async def root():
             "storage_stats": "/api/v1/storage/stats",
             "backups_trigger": "/api/v1/backups/trigger",
             "backups_history": "/api/v1/backups/history",
+            "archives_export": "/api/v1/archives/export",
+            "archives_verify": "/api/v1/archives/verify",
+            "archives_restore": "/api/v1/archives/restore",
         },
         "storage_mode": settings.STORAGE_PROVIDER,
         "message": "Cloud Backup System API is running successfully.",

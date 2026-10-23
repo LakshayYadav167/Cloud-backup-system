@@ -377,6 +377,12 @@ export const App: React.FC = () => {
                 isLoading={isLoadingSnapshots}
                 onTriggerBackup={handleTriggerBackup}
                 onRefresh={loadSnapshots}
+                onArchiveRestored={() => {
+                  loadFiles(searchQuery, fileOffset);
+                  loadStatsAndHealth();
+                  loadSnapshots();
+                  addToast('info', 'Data Synced', 'Archive import completed. File inventory and metrics updated.');
+                }}
               />
             )}
           </div>

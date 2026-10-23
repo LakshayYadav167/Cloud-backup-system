@@ -14,7 +14,8 @@
 - **Backend Architecture**: Python 3 + FastAPI + Uvicorn with asynchronous endpoints and OpenAPI documentation.
 - **Persistence Tier**: SQLite 3 with WAL mode for file metadata, immutable versions, audit logs, and backup snapshots.
 - **Storage Tier**: Local filesystem backing (default, ₹0 dependencies) with an object-oriented `StorageProvider` abstraction layer plus optional S3-compatible object store driver for **Floci** local AWS emulator (or LocalStack/SeaweedFS).
-- **Testing**: `pytest` for backend API, unit, E2E smoke, and Floci integration tests (34 passed, 2 skipped when Floci offline); `vitest` for frontend component verification (14 passed).
+- **Testing**: `pytest` for backend API, unit, E2E smoke, archive recovery, and Floci integration tests (43 passed, 2 skipped when Floci offline); `vitest` for frontend component verification (19 passed across 5 test suites).
+- **Portable Backup Archives (Phase 7)**: Independently restorable standard ZIP archives with root `manifest.json` (v1.0.0), binary payloads, SHA-256 integrity verification, and safe conflict strategies.
 - **DevOps & CI/CD**: Local Jenkins pipeline (`Jenkinsfile`), Docker multi-stage builds, and Docker Compose for zero-cost build and orchestration automation.
 
 ---
@@ -429,15 +430,149 @@ With the backend running locally (`http://127.0.0.1:8000`):
 
 ## 💾 Backup Semantics, Recovery Model & Limitations
 
-To ensure complete transparency for college defense and technical review, the backup snapshot mechanism operates as follows:
+To ensure complete transparency for college defense, technical review, and disaster recovery audits, the system differentiates between **Point-in-Time Metadata Snapshots** (Phase 2) and **Portable Backup Archives** (Phase 7):
 
-| Dimension | Implementation Details & Semantics |
-| :--- | :--- |
-| **What Snapshots Contain** | **Relational Manifest & Audit History**: Stored in SQLite `backups` and `backup_items` tables. Contains point-in-time references (`file_id`, `version_id`), individual file SHA-256 hashes, byte sizes, and an aggregate deterministic snapshot checksum (SHA-256 of sorted `file_id:sha256\n` entries). |
-| **What Snapshots Do NOT Contain** | **No Duplicate Blob Archives**: Snapshots do **NOT** duplicate, zip, or package raw file bytes into separate archive files. They reference immutable blobs stored in the active storage backend (`./data/storage` or Floci S3 bucket). |
-| **What Can Be Restored** | **Historical Version Rollback**: Users can roll back any active file to any previous version (`POST /api/v1/files/{file_id}/restore/{version_id}`). The API updates the active version pointer while keeping all past versions intact. |
-| **What Cannot Be Restored** | **Hardware / Storage Volume Destruction**: If physical storage disks or Docker named volumes are deleted, a metadata snapshot alone **cannot** recover the file contents. Furthermore, if a file is permanently deleted via `DELETE /api/v1/files/{file_id}`, its physical blobs and SQLite records are purged. |
-| **Academic & Architectural Scope** | **A metadata-only snapshot is NOT an off-site disaster-recovery backup.** It is designed for audit logging, point-in-time integrity verification, and instant rollback within a zero-budget architecture. |
+### 1. Metadata Snapshots vs. Portable Backup Archives
+
+| Architectural Dimension | Metadata Snapshots (Phase 2) | Portable Backup Archives (Phase 7) |
+| :--- | :--- | :--- |
+| **Storage Medium** | SQLite `backups` & `backup_items` relational tables. | Standard `.zip` binary archive with root `manifest.json`. |
+| **Contents** | References (`file_id`, `version_id`), individual SHA-256 hashes, sizes, aggregate checksum. | Complete raw binary payloads for all active files & historical versions under `blobs/`, plus format v1.0.0 manifest. |
+| **Payload Duplication** | Zero payload duplication. Fast, zero-overhead point-in-time state capture. | Self-contained. Copies required versions from storage backend into ZIP. |
+| **Independence** | Dependent on existing backend storage (`./data/storage` or Floci S3) and SQLite database. | **100% Independent**. Restorable onto clean, isolated installations without the original database or file paths. |
+| **Primary Use Case** | Point-in-time state auditing, instantaneous version rollback, change tracking. | Full disaster recovery, hardware migrations, external cold storage, and offline portability. |
+
+---
+
+### 2. Portable Backup Archive Format Specification (v1.0.0)
+
+A portable backup archive is an unencrypted, standardized ZIP archive generated using Python's standard library (`zipfile`, `hashlib`, `json`). It adheres strictly to format version `1.0.0`:
+
+```text
+backup_archive_20261024_030000.zip
+├── manifest.json                  # Root cryptographic manifest (v1.0.0)
+└── blobs/
+    ├── {version_id_1}_report.pdf  # Raw payload bytes for File 1, Version 1
+    ├── {version_id_2}_report.pdf  # Raw payload bytes for File 1, Version 2
+    └── {version_id_3}_data.csv    # Raw payload bytes for File 2, Version 1
+```
+
+- **Manifest Metadata**: Root `manifest.json` specifies `archive_format_version: "1.0.0"`, `generator: "CloudBackupSystem/1.0.0"`, `exported_at`, `total_files`, `total_versions`, `total_bytes`, and the files array.
+- **File & Version Relationships**: Each entry records `original_filename`, `safe_filename`, `content_type`, `current_version_number`, `total_versions`, and ordered `versions` with `archive_blob_path`, `size_bytes`, `sha256`, `change_summary`, and `is_current`.
+- **Policy on Missing Blobs**: If any underlying version blob is missing from storage, the export immediately aborts with `HTTP 409 Conflict`. **The system never outputs a truncated or incomplete backup while claiming success.**
+- **Secret Exclusion**: Archives strictly package user files and metadata. Application secrets, `.env` files, JWT tokens, SQLite database files, and operating system paths are categorically excluded.
+
+---
+
+### 3. Security, Defenses & Conflict Handling
+
+- **Path Traversal Defense**: Zip entries with absolute paths, drive letters (`C:`), or directory traversals (`../`) are detected and rejected during verification.
+- **Windows Reserved Device Names**: Filenames matching `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9` are rejected.
+- **Decompression Bomb Mitigation**:
+  - Max archive upload size: **100 MB**.
+  - Max total uncompressed payload: **250 MB**.
+  - Max entry count: **1,000 entries**.
+  - Max compression ratio: **100:1**.
+- **Cryptographic Pre-Verification**: Verification and restore operations compute the SHA-256 digest of every uncompressed blob and match it against `manifest.json` before any database or storage mutations are made.
+- **Zero-Trust Identifiers**: Archive UUIDs are never trusted. During restoration, fresh internal system UUIDs and storage keys are generated.
+- **Storage Rollback**: If a database error occurs during restore, newly written storage objects are rolled back and purged to prevent disk clutter.
+- **Conflict Resolution Strategies**:
+  - `rename` *(Default)*: Safely appends `_imported_{short_uuid}` to conflicting filenames. Existing files and historical versions remain untouched.
+  - `skip`: Skips files that already exist in the target system. Only new files are imported.
+  - `replace`: Atomically removes colliding existing files and all their historical versions, replacing them with the archive's versions.
+
+---
+
+### 4. PowerShell Commands: Export, Verify & Restore
+
+All archive operations can be executed directly from Windows PowerShell using `Invoke-RestMethod` or `curl.exe`:
+
+#### Step A: Export Archive (.zip)
+```powershell
+# Export archive with audit notes to a local ZIP file
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/archives/export?notes=Monthly+Offline+Backup" `
+  -Method GET `
+  -OutFile "C:\temp\backup_archive.zip"
+
+Write-Host "Archive exported successfully to C:\temp\backup_archive.zip"
+```
+
+#### Step B: Verify Archive Integrity (Dry-Run Check)
+```powershell
+# Inspect archive structure, zip limits, and SHA-256 checksums without modifying state
+$filePath = "C:\temp\backup_archive.zip"
+$form = @{
+  file = Get-Item -Path $filePath
+}
+$verifyResult = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/archives/verify" `
+  -Method POST `
+  -Form $form
+
+# Display verification summary
+$verifyResult | Format-List valid, format_version, total_files, total_versions, total_readable, errors
+```
+
+#### Step C: Restore Archive into Live System
+```powershell
+# Restore archive with non-destructive 'rename' conflict strategy (or 'skip', 'replace')
+$filePath = "C:\temp\backup_archive.zip"
+$form = @{
+  file              = Get-Item -Path $filePath
+  conflict_strategy = "rename"
+}
+$restoreResult = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/archives/restore" `
+  -Method POST `
+  -Form $form
+
+Write-Host "Restore Message: $($restoreResult.message)"
+Write-Host "Files Imported:  $($restoreResult.imported_files_count)"
+Write-Host "Versions Added:  $($restoreResult.imported_versions_count)"
+```
+
+---
+
+### 5. Safe Recovery into an Isolated Environment (Disaster Recovery Simulation)
+
+To prove that a backup archive is 100% independently recoverable on an air-gapped or fresh system without access to the original SQLite database or storage directories:
+
+```powershell
+# 1. Create a clean, temporary recovery workspace
+$RecoveryDir = "C:\temp\isolated_recovery_test"
+New-Item -ItemType Directory -Path "$RecoveryDir\storage" -Force | Out-Null
+
+# 2. Launch an isolated FastAPI instance pointing to a fresh database and storage directory
+$env:DATABASE_PATH    = "$RecoveryDir\recovery.db"
+$env:LOCAL_STORAGE_DIR = "$RecoveryDir\storage"
+$env:STORAGE_PROVIDER  = "local"
+$env:PORT              = "8005"
+
+# (In a separate terminal, start backend on port 8005)
+# Start-Process python -ArgumentList "-m uvicorn app.main:app --port 8005"
+
+# 3. Post the archive to the fresh backend
+$form = @{
+  file              = Get-Item -Path "C:\temp\backup_archive.zip"
+  conflict_strategy = "rename"
+}
+$res = Invoke-RestMethod -Uri "http://127.0.0.1:8005/api/v1/archives/restore" -Method POST -Form $form
+
+# 4. Verify catalog on fresh system
+$files = Invoke-RestMethod -Uri "http://127.0.0.1:8005/api/v1/files" -Method GET
+Write-Host "Recovered $($files.total) files in isolated environment!"
+
+# 5. Clean up temporary recovery directory after verification
+Remove-Item -Path $RecoveryDir -Recurse -Force
+```
+
+---
+
+### 6. Disaster Recovery Disclaimer & Limitations
+
+> [!IMPORTANT]
+> **Disaster Recovery Reality Check**:
+> 1. An archive is independently recoverable **only if** all required binary contents are intact and the archive passes cryptographic SHA-256 verification.
+> 2. **Local archives are NOT off-site disaster recovery.** Storing a `.zip` archive on the same physical drive or virtual machine does not protect against drive failure, filesystem corruption, or machine loss. For true disaster recovery, archive files must be replicated to separate physical media, off-site secondary storage, or cold cloud archives.
+> 3. Single-system concurrency limitations: While SQLite WAL mode provides multi-reader concurrency, archive export takes an atomic snapshot view of the database metadata at the moment of invocation. Files modified during export will be captured according to the transaction's initial state.
 
 ---
 
