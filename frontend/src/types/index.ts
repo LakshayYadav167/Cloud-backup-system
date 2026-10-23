@@ -1,39 +1,101 @@
 /**
- * Core type definitions for Cloud Backup System frontend
+ * TypeScript interfaces matching the backend FastAPI schemas.
+ * Derived from backend/app/models/schemas.py.
  */
 
-export interface HealthStatus {
+export interface HealthResponse {
   status: 'healthy' | 'degraded' | 'offline';
   app_name: string;
   version: string;
   environment: string;
   storage_provider: string;
+  database_status: string;
   timestamp: string;
-}
-
-export interface StorageStats {
-  total_files: number;
-  total_bytes: number;
-  total_readable: string;
-  active_provider: string;
-  storage_directory: string;
-  last_backup_at?: string;
 }
 
 export interface FileItem {
   id: string;
-  original_filename: string;
+  filename: string;
+  content_type: string;
   size_bytes: number;
-  mime_type: string;
   sha256: string;
+  current_version_id?: string | null;
+  current_version_number: number;
+  total_versions: number;
   created_at: string;
+  updated_at: string;
+}
+
+export interface FileVersionSummary {
+  id: string;
+  file_id: string;
+  version_number: number;
+  size_bytes: number;
+  sha256: string;
+  content_type: string;
+  change_summary: string;
+  created_at: string;
+  is_current: boolean;
+}
+
+export interface FileListResponse {
+  items: FileItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface FileUploadResponse {
+  file: FileItem;
+  version: FileVersionSummary;
+  message: string;
+}
+
+export interface FileRestoreResponse {
+  success: boolean;
+  message: string;
+  file: FileItem;
+  restored_version: FileVersionSummary;
+}
+
+export interface FileDeleteResponse {
+  success: boolean;
+  message: string;
+  file_id: string;
+}
+
+export interface StorageStats {
+  provider: string;
+  total_files: number;
+  total_versions: number;
+  total_bytes: number;
+  total_readable: string;
+  quota_bytes: number;
+  quota_readable: string;
+  quota_percent_used: number;
+  base_location: string;
+  last_backup_at?: string | null;
 }
 
 export interface BackupSnapshot {
   id: string;
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
   snapshot_timestamp: string;
-  files_included: number;
+  total_files: number;
   total_bytes: number;
-  notes?: string;
+  total_readable: string;
+  checksum?: string | null;
+  notes?: string | null;
+}
+
+export interface BackupHistoryResponse {
+  snapshots: BackupSnapshot[];
+  total: number;
+}
+
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  title: string;
+  message?: string;
 }

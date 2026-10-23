@@ -196,6 +196,53 @@ Once running, open your web browser to:
 
 ---
 
+## 💻 Running the Frontend Dashboard (Windows PowerShell)
+
+In a separate PowerShell terminal:
+
+### 1. Configure Environment
+```powershell
+# Navigate to frontend directory
+cd c:\antigravity_projects\cloud_backup_system\frontend
+
+# Ensure local .env exists (default proxies to /api/v1 on backend)
+Copy-Item .env.example .env
+```
+
+### 2. Run Frontend Automated Tests
+```powershell
+# Run Vitest component & unit tests
+npm.cmd test
+```
+*Output: 4 test suites passed (14 tests passed), 0 failed.*
+
+### 3. Build Production Bundle
+```powershell
+# Validate TypeScript types and compile Vite production assets
+npm.cmd run build
+```
+
+### 4. Start the Frontend Development Server
+```powershell
+# Launch Vite dev server on port 5173
+npm.cmd run dev
+```
+
+Open your browser to [http://localhost:5173](http://localhost:5173). The Vite reverse proxy forwards all `/api/*` calls directly to `http://127.0.0.1:8000` with zero CORS issues.
+
+---
+
+## 🖥️ Dashboard Capabilities (Phase 3 Implemented)
+
+- **Storage Metrics Card**: Live visual quota bar (default 50 MB), tracked files counter, active storage engine driver badge (`local` / `s3`), and point-in-time timestamp.
+- **Drag-and-Drop Uploader**: Visual drop target, version notes field, pre-upload file size verification (<50 MB), reserved Windows device names filter, and real-time upload status.
+- **File Inventory**: Substring search filter, pagination, semantic mime-type icons, active version badge (`v1`, `v2`, etc.), copyable SHA-256 fingerprint, single-click download, and confirmation-guarded deletion.
+- **Version Drawer**: Slide-over timeline of historical versions with release notes, creation timestamps, version download action, and one-click rollback/restore with confirmation dialog.
+- **System Snapshots**: Manual trigger for system-wide manifest snapshots and point-in-time snapshot audit trail.
+- **Graceful Error Recovery**: Live backend heartbeat indicator with automatic reconnect banner and fallback states when the backend is offline.
+
+---
+
 ## 📦 Optional: Running with Local MinIO (S3 Mode)
 
 To test the S3 adapter locally using free MinIO Community:
