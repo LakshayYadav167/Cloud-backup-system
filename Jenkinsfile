@@ -126,13 +126,13 @@ pipeline {
         // ---------------------------------------------------------------------
         stage('Frontend Dependencies') {
             steps {
-                echo 'Installing frontend npm dependencies reproducibly...'
+                echo 'Installing frontend npm dependencies reproducibly from package-lock.json...'
                 dir("${env.FRONTEND_DIR}") {
                     script {
                         if (isUnix()) {
-                            sh 'npm ci || npm install'
+                            sh 'npm ci'
                         } else {
-                            bat 'npm.cmd ci || npm.cmd install'
+                            bat 'npm.cmd ci'
                         }
                     }
                 }
@@ -202,7 +202,7 @@ pipeline {
         // ---------------------------------------------------------------------
         stage('Container Image Build') {
             when {
-                expression { return params.BUILD_DOCKER_IMAGES }
+                expression { return params.BUILD_DOCKER_IMAGES == null ? true : params.BUILD_DOCKER_IMAGES }
             }
             steps {
                 echo 'Building multi-stage Docker container images locally...'
@@ -223,7 +223,7 @@ pipeline {
         // ---------------------------------------------------------------------
         stage('Floci Integration Tests') {
             when {
-                expression { return params.RUN_INTEGRATION_TESTS }
+                expression { return params.RUN_INTEGRATION_TESTS == null ? false : params.RUN_INTEGRATION_TESTS }
             }
             steps {
                 echo 'Spinning up Floci emulator container and executing live S3 integration tests...'
