@@ -332,3 +332,88 @@ def test_preserve_existing_snapshot_behavior(client: TestClient):
     hist_res = client.get("/api/v1/backups/history")
     assert hist_res.status_code == 200
     assert hist_res.json()["total"] >= 1
+
+
+def test_restore_conflict_handling_replace(client: TestClient):
+    """Conflict strategy 'replace' must replace existing files without leaving orphaned metadata or objects."""
+    # 1. Upload existing file with content A
+    res_orig = client.post(
+        "/api/v1/files/upload",
+        files={"file": ("to_replace.txt", BytesIO(b"Original Content to Overwrite"), "text/plain")},
+    )
+    assert res_orig.status_code == 201
+    orig_id = res_orig.json()["file"]["id"]
+
+    # 2. Prepare an archive with a newer version of to_replace.txt
+    archive_payload = b"Brand New Replaced Payload from Archive"
+    export_prep = client.post(
+        "/api/v1/files/upload",
+        files={"file": ("brand_new_item.txt", BytesIO(archive_payload), "text/plain")},
+    )
+    assert export_prep.status_code == 201
+
+    export_res = client.get("/api/v1/archives/export")
+    assert export_res.status_code == 200
+    archive_bytes = export_res.content
+
+    # Modify manifest in zip so archive only contains the replacement file named 'to_replace.txt'
+    modified_buf = BytesIO()
+    with zipfile.ZipFile(BytesIO(archive_bytes), "r") as z_in, zipfile.ZipFile(modified_buf, "w") as z_out:
+        manifest = json.loads(z_in.read("manifest.json").decode("utf-8"))
+        new_files = []
+        for f in manifest["files"]:
+            if f["filename"] == "brand_new_item.txt":
+                f["filename"] = "to_replace.txt"
+                f["original_filename"] = "to_replace.txt"
+                new_files.append(f)
+        manifest["files"] = new_files
+        manifest["total_files"] = len(new_files)
+        z_out.writestr("manifest.json", json.dumps(manifest))
+        for item in z_in.infolist():
+            if item.filename != "manifest.json":
+                z_out.writestr(item, z_in.read(item.filename))
+
+    modified_buf.seek(0)
+
+    # 3. Restore with 'replace'
+    replace_res = client.post(
+        "/api/v1/archives/restore",
+        files={"file": ("replace_archive.zip", modified_buf, "application/zip")},
+        data={"conflict_strategy": "replace"},
+    )
+    assert replace_res.status_code == 200
+    assert any("replaced" in d.lower() for d in replace_res.json()["details"])
+
+    # 4. Verify that to_replace.txt has been replaced
+    list_res = client.get("/api/v1/files?search=to_replace.txt")
+    assert list_res.status_code == 200
+    items = list_res.json()["items"]
+    assert len(items) == 1
+    new_file = items[0]
+
+    # Verify ID changed and content matches archive payload
+    assert new_file["id"] != orig_id
+    dl_res = client.get(f"/api/v1/files/{new_file['id']}/download")
+    assert dl_res.status_code == 200
+    assert dl_res.content == archive_payload
+
+
+def test_rejected_archive_does_not_modify_catalog(client: TestClient):
+    """A rejected or corrupted archive must not partially import files or alter database state."""
+    # Count files before
+    before_files = client.get("/api/v1/files").json()["total"]
+
+    # Create a corrupted zip
+    bad_buf = BytesIO(b"PK\x03\x04not-a-valid-zip-content")
+
+    res = client.post(
+        "/api/v1/archives/restore",
+        files={"file": ("corrupt.zip", bad_buf, "application/zip")},
+        data={"conflict_strategy": "rename"},
+    )
+    assert res.status_code == 400
+
+    # Count files after: must remain unchanged
+    after_files = client.get("/api/v1/files").json()["total"]
+    assert after_files == before_files
+

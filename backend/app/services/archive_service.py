@@ -53,8 +53,8 @@ def validate_zip_entry_name(entry_name: str) -> None:
         raise ValueError("Archive contains an empty entry name.")
 
     # Disallow backslashes, null bytes, or control characters
-    if "\\" in entry_name or "\x00" in entry_name:
-        raise ValueError(f"Entry '{entry_name}' contains illegal path separators or null bytes.")
+    if "\\" in entry_name or "\x00" in entry_name or any(ord(c) < 32 for c in entry_name):
+        raise ValueError(f"Entry '{entry_name}' contains illegal path separators or control characters.")
 
     # Disallow leading slashes or absolute path specifiers
     if entry_name.startswith("/"):
@@ -497,6 +497,7 @@ class ArchiveService:
         skipped_files_count = 0
         details: List[str] = []
         created_object_keys: List[str] = []
+        old_storage_keys_to_delete: List[str] = []
 
         try:
             with zipfile.ZipFile(buffer, mode="r") as zf:
@@ -504,56 +505,54 @@ class ArchiveService:
                 manifest = json.loads(manifest_raw)
                 files = manifest.get("files", [])
 
-                cursor = self.db.cursor()
+                # Entire database restoration runs within a single atomic transaction
+                with self.db:
+                    cursor = self.db.cursor()
 
-                for f_entry in files:
-                    original_filename = sanitize_filename(f_entry["filename"])
-                    content_type = f_entry.get("content_type", "application/octet-stream")
-                    versions = f_entry.get("versions", [])
+                    for f_entry in files:
+                        original_filename = sanitize_filename(f_entry["filename"])
+                        content_type = f_entry.get("content_type", "application/octet-stream")
+                        versions = f_entry.get("versions", [])
 
-                    # Check for name collisions
-                    cursor.execute(
-                        "SELECT id FROM files WHERE filename = ? AND is_deleted = 0",
-                        (original_filename,),
-                    )
-                    existing_row = cursor.fetchone()
+                        # Check for name collisions
+                        cursor.execute(
+                            "SELECT id FROM files WHERE filename = ? AND is_deleted = 0",
+                            (original_filename,),
+                        )
+                        existing_row = cursor.fetchone()
 
-                    target_filename = original_filename
+                        target_filename = original_filename
 
-                    if existing_row:
-                        if strategy == "skip":
-                            skipped_files_count += 1
-                            details.append(f"Skipped '{original_filename}' (file already exists).")
-                            continue
-                        elif strategy == "rename":
-                            short_slug = str(uuid.uuid4())[:8]
-                            stem = Path(original_filename).stem
-                            suffix = Path(original_filename).suffix
-                            target_filename = f"{stem}_imported_{short_slug}{suffix}"
-                            details.append(f"Renamed '{original_filename}' &rarr; '{target_filename}' (conflict resolution).")
-                        elif strategy == "replace":
-                            # Delete existing file and its versions
-                            existing_file_id = existing_row["id"]
-                            cursor.execute(
-                                "SELECT object_key FROM file_versions WHERE file_id = ?",
-                                (existing_file_id,),
-                            )
-                            old_keys = [r["object_key"] for r in cursor.fetchall()]
-                            for old_key in old_keys:
-                                try:
-                                    self.storage.delete_file(old_key)
-                                except Exception:
-                                    pass
-                            with self.db:
+                        if existing_row:
+                            if strategy == "skip":
+                                skipped_files_count += 1
+                                details.append(f"Skipped '{original_filename}' (file already exists).")
+                                continue
+                            elif strategy == "rename":
+                                short_slug = str(uuid.uuid4())[:8]
+                                stem = Path(original_filename).stem
+                                suffix = Path(original_filename).suffix
+                                target_filename = f"{stem}_imported_{short_slug}{suffix}"
+                                details.append(f"Renamed '{original_filename}' &rarr; '{target_filename}' (conflict resolution).")
+                            elif strategy == "replace":
+                                existing_file_id = existing_row["id"]
+                                cursor.execute(
+                                    "SELECT object_key FROM file_versions WHERE file_id = ?",
+                                    (existing_file_id,),
+                                )
+                                old_keys = [r["object_key"] for r in cursor.fetchall()]
+                                old_storage_keys_to_delete.extend(old_keys)
+
+                                # Atomically delete database records
+                                self.db.execute("DELETE FROM file_versions WHERE file_id = ?", (existing_file_id,))
                                 self.db.execute("DELETE FROM files WHERE id = ?", (existing_file_id,))
-                            details.append(f"Replaced existing file '{original_filename}'.")
+                                details.append(f"Replaced existing file '{original_filename}'.")
 
-                    # Generate brand new unique file ID
-                    new_file_id = str(uuid.uuid4())
-                    now_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                        # Generate brand new unique file ID
+                        new_file_id = str(uuid.uuid4())
+                        now_ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
-                    # Insert parent logical file record (placeholder current_version_id updated after)
-                    with self.db:
+                        # Insert parent logical file record (placeholder current_version_id updated after)
                         self.db.execute(
                             """
                             INSERT INTO files (id, filename, content_type, current_version_id, is_deleted, created_at, updated_at)
@@ -562,31 +561,30 @@ class ArchiveService:
                             (new_file_id, target_filename, content_type, now_ts, now_ts),
                         )
 
-                    new_current_version_id: Optional[str] = None
-                    versions_sorted = sorted(versions, key=lambda v: v.get("version_number", 1))
+                        new_current_version_id: Optional[str] = None
+                        versions_sorted = sorted(versions, key=lambda v: v.get("version_number", 1))
 
-                    for v_entry in versions_sorted:
-                        v_num = v_entry.get("version_number", 1)
-                        v_sha = v_entry.get("sha256")
-                        v_mime = v_entry.get("content_type", content_type)
-                        v_summary = v_entry.get("change_summary", "Restored from archive")
-                        v_created = v_entry.get("created_at", now_ts)
-                        is_active_version = v_entry.get("is_current", False)
-                        arch_path = v_entry["archive_path"]
+                        for v_entry in versions_sorted:
+                            v_num = v_entry.get("version_number", 1)
+                            v_sha = v_entry.get("sha256")
+                            v_mime = v_entry.get("content_type", content_type)
+                            v_summary = v_entry.get("change_summary", "Restored from archive")
+                            v_created = v_entry.get("created_at", now_ts)
+                            is_active_version = v_entry.get("is_current", False)
+                            arch_path = v_entry["archive_path"]
 
-                        # Read payload from zip
-                        blob_bytes = zf.read(arch_path)
+                            # Read payload from zip
+                            blob_bytes = zf.read(arch_path)
 
-                        # Generate new unique object key in target storage backend
-                        new_version_id = str(uuid.uuid4())
-                        new_object_key = f"imported_{new_version_id}_{target_filename}"
+                            # Generate new unique object key in target storage backend
+                            new_version_id = str(uuid.uuid4())
+                            new_object_key = f"imported_{new_version_id}_{target_filename}"
 
-                        # Save into active storage provider
-                        self.storage.save_file(new_object_key, BytesIO(blob_bytes))
-                        created_object_keys.append(new_object_key)
+                            # Save into active storage provider
+                            self.storage.save_file(new_object_key, BytesIO(blob_bytes))
+                            created_object_keys.append(new_object_key)
 
-                        # Record in database
-                        with self.db:
+                            # Record in database
                             self.db.execute(
                                 """
                                 INSERT INTO file_versions (
@@ -608,13 +606,12 @@ class ArchiveService:
                                 ),
                             )
 
-                        imported_versions_count += 1
+                            imported_versions_count += 1
 
-                        if is_active_version or new_current_version_id is None:
-                            new_current_version_id = new_version_id
+                            if is_active_version or new_current_version_id is None:
+                                new_current_version_id = new_version_id
 
-                    # Update files table with target active current_version_id
-                    with self.db:
+                        # Update files table with target active current_version_id
                         self.db.execute(
                             """
                             UPDATE files
@@ -624,7 +621,14 @@ class ArchiveService:
                             (new_current_version_id, new_file_id),
                         )
 
-                    imported_files_count += 1
+                        imported_files_count += 1
+
+            # Only after the entire transaction successfully commits do we purge old storage keys
+            for old_key in old_storage_keys_to_delete:
+                try:
+                    self.storage.delete_file(old_key)
+                except Exception:
+                    pass
 
         except Exception as restore_err:
             # Rollback newly written physical objects

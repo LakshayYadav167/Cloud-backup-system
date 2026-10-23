@@ -587,9 +587,9 @@ For the comprehensive configuration guide, tool matrix, plugin recommendations, 
 1. **Checkout**: Pulls repository branch from Git SCM.
 2. **Environment Validation**: Non-destructive version audit of Python, Node, npm, Docker, and Compose.
 3. **Backend Dependencies**: Installs pinned requirements from `backend/requirements.txt`.
-4. **Backend Tests**: Executes 34 pytest unit and E2E tests generating JUnit XML (`reports/backend-junit.xml`).
+4. **Backend Tests**: Executes 45 pytest unit and E2E tests generating JUnit XML (`reports/backend-junit.xml`).
 5. **Frontend Dependencies**: Reproducibly installs dependencies via strict `npm ci`.
-6. **Frontend Tests**: Executes 14 Vitest tests generating JUnit XML (`reports/frontend-junit.xml`).
+6. **Frontend Tests**: Executes 19 Vitest tests generating JUnit XML (`reports/frontend-junit.xml`).
 7. **Frontend Production Build**: Runs `tsc -b && vite build` and validates bundle artifacts.
 8. **Docker Compose Validation**: Validates Compose definitions for both default and `--profile s3` modes.
 9. **Container Image Build** *(Parameterized)*: Builds `cloud-backup-backend:ci` and `cloud-backup-frontend:ci`.
@@ -620,3 +620,82 @@ For the comprehensive configuration guide, tool matrix, plugin recommendations, 
 3. **Immutable History**: Historical object keys cannot be overwritten. Uploading a revised file creates a new unique key and increments the version counter.
 4. **Data Isolation**: Internal disk paths are masked in API outputs.
 5. **Scope Notice**: Designed as a single-user local demonstration system without multi-user authentication.
+
+---
+
+## 🏁 Phase 8 Final Release Verification Checklist
+
+This reproducible checklist verifies the entire system across backend, frontend, isolated recovery, and Docker layers.
+
+### 1. Execute All Automated Tests (Zero Running Services Required)
+
+```powershell
+# A. Run full backend pytest test suite (45 passed, 2 skipped when Floci offline)
+python -m pytest backend/tests -v
+
+# B. Run genuine isolated portable archive recovery audit (8/8 steps passed)
+python scripts/verify-archive-recovery.py
+
+# C. Run frontend Vitest test suite (19 passed across 5 test suites)
+cd frontend
+cmd /c npm test
+cd ..
+
+# D. Validate frontend production TypeScript compilation & bundle build
+cd frontend
+cmd /c npm run build
+cd ..
+```
+
+### 2. Validate Container Orchestration & Build Container Images
+
+```powershell
+# A. Validate default Compose specification (local filesystem mode)
+docker compose config --quiet
+
+# B. Validate multi-container Compose specification with S3 profile (Floci mode)
+docker compose --profile s3 config --quiet
+
+# C. Build production container images for backend and frontend
+docker compose build
+```
+
+### 3. Launching Application & Live Verification
+
+#### Local Mode (Default, Zero Container Dependencies)
+```powershell
+# Launch backend and frontend dev servers locally
+.\scripts\start-local.ps1
+
+# In another terminal, run live end-to-end smoke test against running server
+.\scripts\smoke-test.ps1
+```
+
+#### Floci S3-Compatible Mode (Local Containerized S3 Emulator)
+```powershell
+# Start Floci container with persistent Docker volume
+docker compose --profile s3 up -d floci
+
+# Verify Floci emulator health
+Invoke-RestMethod -Uri "http://localhost:4566/_floci/health"
+
+# Run Floci live integration tests
+python -m pytest backend/tests/test_floci_integration.py -v
+
+# Stop Floci without deleting persistent volume
+docker compose stop floci
+```
+
+---
+
+### 4. Integration Verification Summary Matrix
+
+| Subsystem / Layer | Verification Method | Status | Notes |
+| :--- | :--- | :--- | :--- |
+| **Backend Core & Storage** | `pytest backend/tests` | ✅ **45 passed, 2 skipped** | Local disk default; unit mocks cover S3 driver; live Floci skipped when offline. |
+| **Isolated Archive Recovery** | `python scripts/verify-archive-recovery.py` | ✅ **8/8 steps passed** | Genuine disaster recovery verified in isolated temporary workspace; byte-for-byte verified. |
+| **Frontend UI & Tests** | `vitest run` & `tsc -b && vite build` | ✅ **19 passed, 0 errors** | File inventory, version drawer, snapshots, and archive operations verified. |
+| **Docker Compose Config** | `docker compose config` | ✅ **Validated** | Default and `--profile s3` validated. |
+| **Container Images** | `docker compose build` | ✅ **Built** | `cloud_backup_system-backend` and `cloud_backup_system-frontend` built cleanly. |
+| **Jenkins CI/CD** | Groovy syntax & declarative compilation | ⏸️ **Syntax Validated** | Live pipeline job execution in Jenkins UI deferred until final task. |
+
