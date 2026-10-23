@@ -1,9 +1,7 @@
 """Storage provider abstraction layer.
 
-This module defines the abstract contract that any storage driver (e.g.
-Local FileSystem, MinIO, or S3-compatible storage) must implement. This
-ensures the Cloud Backup System remains modular and decoupled from the
-underlying physical persistence mechanism.
+Defines the abstract interface for storage drivers (Local Filesystem,
+S3 / MinIO compatible object storage).
 """
 
 from abc import ABC, abstractmethod
@@ -14,10 +12,17 @@ from typing import BinaryIO, Dict, Optional
 @dataclass
 class StorageItemInfo:
     """Standardized metadata returned after persisting a file."""
-    file_id: str
     stored_path_or_key: str
     size_bytes: int
     sha256_checksum: str
+    object_key: str = ""
+    file_id: str = ""
+
+    def __post_init__(self):
+        if not self.object_key:
+            self.object_key = self.stored_path_or_key
+        if not self.file_id:
+            self.file_id = self.object_key
 
 
 @dataclass
@@ -35,55 +40,55 @@ class StorageProvider(ABC):
     @abstractmethod
     def save_file(
         self,
-        file_id: str,
+        object_key: str,
         content: BinaryIO,
         metadata: Optional[Dict[str, str]] = None,
     ) -> StorageItemInfo:
-        """Persist a file stream and return standardized item metadata.
+        """Persist a file stream under a unique object key and return metadata.
 
         Args:
-            file_id: Unique identifier (UUID v4) for the file.
+            object_key: Safe unique identifier or path token for the object.
             content: Readable binary stream.
             metadata: Optional dictionary of key/value tags.
 
         Returns:
-            StorageItemInfo with storage location, size, and checksum.
+            StorageItemInfo with storage location, size, and SHA-256 checksum.
         """
         pass
 
     @abstractmethod
-    def get_file(self, file_id: str) -> BinaryIO:
-        """Retrieve a readable binary stream of the stored file.
+    def get_file(self, object_key: str) -> BinaryIO:
+        """Retrieve a readable binary stream of the stored object.
 
         Args:
-            file_id: Unique identifier for the file.
+            object_key: Unique identifier for the object.
 
         Returns:
             Readable BinaryIO stream.
 
         Raises:
-            FileNotFoundError if the target file does not exist.
+            FileNotFoundError if the target object does not exist.
         """
         pass
 
     @abstractmethod
-    def delete_file(self, file_id: str) -> bool:
-        """Permanently remove a stored file.
+    def delete_file(self, object_key: str) -> bool:
+        """Permanently remove a stored object.
 
         Args:
-            file_id: Unique identifier for the file.
+            object_key: Unique identifier for the object.
 
         Returns:
-            True if deleted, False if file did not exist.
+            True if deleted, False if object did not exist.
         """
         pass
 
     @abstractmethod
-    def file_exists(self, file_id: str) -> bool:
-        """Check if a file exists in the storage provider.
+    def file_exists(self, object_key: str) -> bool:
+        """Check if an object exists in the storage provider.
 
         Args:
-            file_id: Unique identifier for the file.
+            object_key: Unique identifier for the object.
 
         Returns:
             True if present, False otherwise.

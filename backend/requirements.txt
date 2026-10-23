@@ -14,6 +14,9 @@ pydantic-settings>=2.6.0,<3.0.0
 # Multipart File Form Handling
 python-multipart>=0.0.18,<1.0.0
 
+# Optional S3 / MinIO Object Storage SDK (Apache 2.0 License - ₹0 Cost)
+boto3>=1.35.0,<2.0.0
+
 # Testing & HTTP Test Client
-pytest>=8.3.0,<9.0.0
+pytest>=8.3.0,<10.0.0
 httpx>=0.28.0,<1.0.0
