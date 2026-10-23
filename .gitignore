@@ -1,0 +1,128 @@
+# ==============================================================================
+# Cloud Backup System - Root .gitignore
+# Compatible with Python, Node.js, SQLite, Local Storage, Windows & Docker
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Environment Variables & Secrets (Keep .env.example tracked)
+# ------------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# ------------------------------------------------------------------------------
+# Python & Backend
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Unit Tests & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# ------------------------------------------------------------------------------
+# Node.js & Frontend
+# ------------------------------------------------------------------------------
+frontend/node_modules/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Frontend Build Output
+frontend/dist/
+frontend/dist-ssr/
+dist/
+.vite/
+
+# ------------------------------------------------------------------------------
+# Local Storage & Database (Zero-budget local filesystem storage)
+# ------------------------------------------------------------------------------
+# SQLite databases
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Backend storage folder: preserve folder structure via .gitkeep, ignore data
+backend/data/*.db*
+backend/data/storage/*
+!backend/data/.gitkeep
+!backend/data/storage/.gitkeep
+
+# ------------------------------------------------------------------------------
+# Operating System & IDE Files
+# ------------------------------------------------------------------------------
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs (VS Code, JetBrains, Visual Studio)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ------------------------------------------------------------------------------
+# CI/CD & Build Tools (DO NOT IGNORE Jenkinsfile)
+# ------------------------------------------------------------------------------
+!Jenkinsfile

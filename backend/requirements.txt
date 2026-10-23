@@ -1,0 +1,19 @@
+# ==============================================================================
+# Cloud Backup System - Backend Dependencies
+# Free, open-source, maintained libraries compatible with Python 3.10+
+# ==============================================================================
+
+# Core Web Framework & ASGI Server
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.32.0,<1.0.0
+
+# Settings & Data Validation
+pydantic>=2.10.0,<3.0.0
+pydantic-settings>=2.6.0,<3.0.0
+
+# Multipart File Form Handling
+python-multipart>=0.0.18,<1.0.0
+
+# Testing & HTTP Test Client
+pytest>=8.3.0,<9.0.0
+httpx>=0.28.0,<1.0.0

@@ -1,0 +1,1 @@
+# Preserves backend data directory structure in Git while keeping database files ignored
