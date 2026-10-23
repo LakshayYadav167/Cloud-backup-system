@@ -33,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Cloud Backup System
                 </h1>
                 <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  ₹0 Budget
+                  Self-Hosted
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium">

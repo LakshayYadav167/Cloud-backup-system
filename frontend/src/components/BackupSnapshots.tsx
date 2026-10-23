@@ -157,7 +157,7 @@ export const BackupSnapshots: React.FC<BackupSnapshotsProps> = ({
             <Archive className="w-4 h-4 text-sky-600" />
             <span>Portable Archives (.zip)</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800">
-              Phase 7
+              Self-Contained
             </span>
           </button>
         </div>

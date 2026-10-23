@@ -88,14 +88,21 @@ describe('Cloud Backup System Dashboard Component', () => {
     vi.mocked(api.getBackupHistory).mockResolvedValue(mockSnapshots);
   });
 
-  it('renders the header title and zero budget guarantee', async () => {
+  it('renders the header title and ensures no internal budget references are displayed', async () => {
     render(<App />);
 
     await waitFor(() => {
       expect(
         screen.getByRole('heading', { level: 1, name: /Cloud Backup System/i })
       ).toBeInTheDocument();
-      expect(screen.getAllByText(/₹0 Budget/i)[0]).toBeInTheDocument();
+      expect(screen.getByText('Self-Hosted')).toBeInTheDocument();
+      expect(screen.getByText('Backup & Recovery Active')).toBeInTheDocument();
+
+      // Ensure internal budget language is not present in the user-facing UI
+      expect(screen.queryByText(/₹0/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/budget/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/zero budget/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/free budget/i)).not.toBeInTheDocument();
     });
   });
 

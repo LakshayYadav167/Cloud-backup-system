@@ -413,14 +413,14 @@ export const App: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <div>
-            <span className="font-semibold text-navy-900">Cloud Backup System</span> &mdash; Full-Stack College Capstone Project
+            <span className="font-semibold text-navy-900">Cloud Backup System</span> &mdash; Automated Storage &amp; Disaster Recovery
           </div>
           <div className="flex items-center space-x-3">
             <span>React + Vite + FastAPI + SQLite</span>
             <span>&bull;</span>
             <span className="inline-flex items-center text-emerald-600 font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-              ₹0 Zero Budget Prototype
+              Backup &amp; Recovery Active
             </span>
           </div>
         </div>
