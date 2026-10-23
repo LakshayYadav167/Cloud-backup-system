@@ -14,7 +14,7 @@
 - **Backend Architecture**: Python 3 + FastAPI + Uvicorn with asynchronous endpoints and OpenAPI documentation.
 - **Persistence Tier**: SQLite 3 with WAL mode for file metadata, immutable versions, audit logs, and backup snapshots.
 - **Storage Tier**: Local filesystem backing (default, ₹0 dependencies) with an object-oriented `StorageProvider` abstraction layer plus optional S3-compatible object store driver for **Floci** local AWS emulator (or LocalStack/SeaweedFS).
-- **Testing**: `pytest` for backend API, unit, and Floci integration tests (32 passing tests); `vitest` for frontend component verification (14 passing tests).
+- **Testing**: `pytest` for backend API, unit, E2E smoke, and Floci integration tests (34 passed, 2 skipped when Floci offline); `vitest` for frontend component verification (14 passed).
 - **DevOps & CI/CD**: Local Jenkins pipeline (`Jenkinsfile`), Docker multi-stage builds, and Docker Compose for zero-cost build and orchestration automation.
 
 ---
@@ -107,6 +107,9 @@ cloud_backup_system/
 │   ├── architecture.md       # Architecture deep-dive, MinIO check, and ER diagram
 │   ├── jenkins-ci-cd.md      # Jenkins CI/CD pipeline architecture and setup guide
 │   └── phase_plan.md         # 6-phase milestone development roadmap
+├── scripts/                  # Automated Windows PowerShell workflows
+│   ├── start-local.ps1       # Local development environment launcher
+│   └── smoke-test.ps1        # 10-step end-to-end API smoke verification
 ├── backend/                  # Python 3 + FastAPI Application
 │   ├── .env.example          # Backend environment variables template
 │   ├── requirements.txt      # Free and maintained Python dependencies
@@ -389,7 +392,52 @@ docker compose ps
 # - Floci S3 Edge:  http://localhost:4566/_floci/health
 
 # Stop without destroying data
+docker compose stop
 ```
+
+---
+
+## 🧪 End-to-End Smoke Test & Verification Workflows
+
+The Cloud Backup System includes two automated, reproducible verification workflows covering all 10 core lifecycle operations:
+
+1. **System Health & Dependency Check** &mdash; Validates SQLite connection and active storage driver.
+2. **Initial File Upload (v1)** &mdash; Computes SHA-256, assigns immutable key, and registers version 1.
+3. **Catalog Listing & Lookup** &mdash; Verifies file indexing and substring search.
+4. **File Download & Content Verification** &mdash; Validates downloaded bytes match original SHA-256.
+5. **Second Version Upload (v2)** &mdash; Increments version number while preserving immutable past version.
+6. **Historical Version Download** &mdash; Retrieves v1 by `version_id` query parameter.
+7. **Version Rollback / Restore** &mdash; Atomically rolls back active pointer to v1.
+8. **Point-in-Time Backup Snapshot** &mdash; Computes deterministic manifest checksum and records in audit history.
+9. **File Deletion & Storage Purge** &mdash; Purges metadata and removes physical blobs from storage.
+10. **Graceful Storage Failure Handling** &mdash; Confirms clean 500 error when storage backend is unavailable, preventing silent local disk fallback.
+
+### Option 1: Automated Pytest E2E Suite (Zero Running Services Required)
+Runs against an isolated in-memory/temporary SQLite database and storage directory:
+```powershell
+python -m pytest backend/tests/test_smoke_e2e.py -v
+```
+
+### Option 2: Live PowerShell Smoke Test (Runs Against Live API)
+With the backend running locally (`http://127.0.0.1:8000`):
+```powershell
+.\scripts\smoke-test.ps1
+```
+*(Uses temporary UUID-tagged files and cleans up automatically without modifying existing user files or SQLite databases).*
+
+---
+
+## 💾 Backup Semantics, Recovery Model & Limitations
+
+To ensure complete transparency for college defense and technical review, the backup snapshot mechanism operates as follows:
+
+| Dimension | Implementation Details & Semantics |
+| :--- | :--- |
+| **What Snapshots Contain** | **Relational Manifest & Audit History**: Stored in SQLite `backups` and `backup_items` tables. Contains point-in-time references (`file_id`, `version_id`), individual file SHA-256 hashes, byte sizes, and an aggregate deterministic snapshot checksum (SHA-256 of sorted `file_id:sha256\n` entries). |
+| **What Snapshots Do NOT Contain** | **No Duplicate Blob Archives**: Snapshots do **NOT** duplicate, zip, or package raw file bytes into separate archive files. They reference immutable blobs stored in the active storage backend (`./data/storage` or Floci S3 bucket). |
+| **What Can Be Restored** | **Historical Version Rollback**: Users can roll back any active file to any previous version (`POST /api/v1/files/{file_id}/restore/{version_id}`). The API updates the active version pointer while keeping all past versions intact. |
+| **What Cannot Be Restored** | **Hardware / Storage Volume Destruction**: If physical storage disks or Docker named volumes are deleted, a metadata snapshot alone **cannot** recover the file contents. Furthermore, if a file is permanently deleted via `DELETE /api/v1/files/{file_id}`, its physical blobs and SQLite records are purged. |
+| **Academic & Architectural Scope** | **A metadata-only snapshot is NOT an off-site disaster-recovery backup.** It is designed for audit logging, point-in-time integrity verification, and instant rollback within a zero-budget architecture. |
 
 ---
 
@@ -404,14 +452,29 @@ For the comprehensive configuration guide, tool matrix, plugin recommendations, 
 1. **Checkout**: Pulls repository branch from Git SCM.
 2. **Environment Validation**: Non-destructive version audit of Python, Node, npm, Docker, and Compose.
 3. **Backend Dependencies**: Installs pinned requirements from `backend/requirements.txt`.
-4. **Backend Tests**: Executes 29 pytest unit tests generating JUnit XML (`reports/backend-junit.xml`).
-5. **Frontend Dependencies**: Reproducibly installs dependencies via `npm ci` / `npm install`.
+4. **Backend Tests**: Executes 34 pytest unit and E2E tests generating JUnit XML (`reports/backend-junit.xml`).
+5. **Frontend Dependencies**: Reproducibly installs dependencies via strict `npm ci`.
 6. **Frontend Tests**: Executes 14 Vitest tests generating JUnit XML (`reports/frontend-junit.xml`).
 7. **Frontend Production Build**: Runs `tsc -b && vite build` and validates bundle artifacts.
 8. **Docker Compose Validation**: Validates Compose definitions for both default and `--profile s3` modes.
 9. **Container Image Build** *(Parameterized)*: Builds `cloud-backup-backend:ci` and `cloud-backup-frontend:ci`.
 10. **Floci S3 Integration Tests** *(Opt-in)*: Spins up local Floci container, verifies S3 persistence, and executes integration tests.
 11. **Summary & Cleanup**: Archives test results, archives `frontend/dist/**`, and safely cleans ephemeral workspace without wiping persistent volumes.
+
+> [!NOTE]
+> **Jenkins Verification Status**: The Declarative `Jenkinsfile`, parameterization, and Groovy syntax validation have been verified using Jenkins' internal compilation engine. Actual Jenkins pipeline job execution in the Jenkins UI and Windows service-account Docker socket troubleshooting have been intentionally deferred. No live build run in Jenkins has been claimed.
+
+---
+
+## 🔧 Troubleshooting & Diagnostics
+
+| Symptom | Probable Cause | Recommended Resolution |
+| :--- | :--- | :--- |
+| **Port 8000 Conflict** | Another process is using port 8000. | Check process via PowerShell: `Get-NetTCPConnection -LocalPort 8000`. Terminate conflicting process or set `PORT=8001` in `.env`. |
+| **Port 5173 Conflict** | Vite or previous node instance active. | Stop orphaned node processes: `Stop-Process -Name node -Force -ErrorAction SilentlyContinue`. |
+| **Storage Provider Degraded** | Floci emulator is offline while `STORAGE_PROVIDER=s3`. | Start Floci via `docker compose --profile s3 up -d floci` or switch back to `STORAGE_PROVIDER=local` in `.env`. |
+| **Docker Named Pipe Blocked** | Windows background service running as `LocalSystem` lacks access to Docker Desktop. | Run Jenkins job under the desktop user account or launch an inbound agent in your desktop session. |
+| **Data Missing After Restart** | Accidental `docker compose down -v`. | Avoid `-v` flag. Always stop containers with `docker compose stop`. |
 
 ---
 

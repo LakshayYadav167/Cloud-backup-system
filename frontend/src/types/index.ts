@@ -10,6 +10,7 @@ export interface HealthResponse {
   environment: string;
   storage_provider: string;
   database_status: string;
+  storage_status?: string;
   timestamp: string;
 }
 

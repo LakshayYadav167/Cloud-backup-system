@@ -14,6 +14,7 @@ class HealthResponse(BaseModel):
     environment: str
     storage_provider: str
     database_status: str
+    storage_status: Optional[str] = "ready"
     timestamp: str
 
 

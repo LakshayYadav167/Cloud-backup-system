@@ -32,6 +32,15 @@ async def health_check(db: sqlite3.Connection = Depends(get_db)):
                 storage_status = "unavailable"
         except Exception:
             storage_status = "unavailable"
+    elif settings.STORAGE_PROVIDER.lower() == "local":
+        try:
+            p = settings.storage_path_resolved
+            if not p.exists() or not p.is_dir():
+                storage_status = "unavailable"
+        except Exception:
+            storage_status = "unavailable"
+    else:
+        storage_status = "unsupported"
 
     is_healthy = db_status == "connected" and storage_status == "ready"
 
@@ -42,5 +51,6 @@ async def health_check(db: sqlite3.Connection = Depends(get_db)):
         environment=settings.APP_ENV,
         storage_provider=settings.STORAGE_PROVIDER,
         database_status=db_status,
+        storage_status=storage_status,
         timestamp=datetime.now(timezone.utc).isoformat(),
     )

@@ -21,7 +21,7 @@ gantt
     section Phase 5
     Jenkins CI/CD Automation        :done, p5, after p4, 2d
     section Phase 6
-    Academic Documentation & Defense:active, p6, after p5, 1d
+    Deployment & E2E Verification   :done, p6, after p5, 1d
 ```
 
 ---
@@ -98,7 +98,11 @@ gantt
 
 ---
 
-### Phase 6: Final Hardening, Submission Documentation & Demo Preparation
-- [ ] Prepare comprehensive Project Report (PDF/Markdown format) meeting college submission standards.
-- [ ] Add Resume Showcase Section: architecture highlights, key technical decisions, zero-budget engineering.
-- [ ] Create presentation script & video demonstration guide.
+### Phase 6: Deployment Readiness, Backup Auditing & End-to-End Verification (Completed)
+- [x] Application startup review: verified zero-dependency local filesystem mode, verified S3/Floci endpoint fail-fast behavior, validated SQLite initialization, and created safe Windows PowerShell startup script (`scripts/start-local.ps1`).
+- [x] Comprehensive backup and restore architecture audit: determined snapshot structure (relational manifest, version references, SHA-256 hashes, deterministic aggregate checksum; clarified that physical blobs are not bundled and metadata-only snapshots are not complete disaster-recovery backups).
+- [x] Added automated tests for snapshot manifest integrity, empty catalog snapshotting, deleted file exclusion, and clean 404 error handling for missing physical storage objects (`backend/tests/test_backups.py`).
+- [x] Created complete 10-step End-to-End automated smoke test suite in pytest (`backend/tests/test_smoke_e2e.py`) verifying health, upload, listing, download verification, versioning, rollback, snapshotting, deletion, and storage provider failure handling.
+- [x] Created standalone Windows PowerShell smoke test workflow (`scripts/smoke-test.ps1`) for live server validation without mutating user data or persistent databases.
+- [x] Security and reliability review: verified path traversal boundaries, Windows reserved name sanitization, payload size limits, CORS restrictions, and localhost port bindings.
+- [x] Documentation updates: detailed PowerShell workflows, local and Floci modes, backup semantics and limitations, troubleshooting guide, and accurate Jenkins execution status in `README.md`.
