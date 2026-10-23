@@ -105,6 +105,7 @@ cloud_backup_system/
 ├── docs/                     # System design and specifications
 │   ├── api_specification.md  # Implemented REST API contracts
 │   ├── architecture.md       # Architecture deep-dive, MinIO check, and ER diagram
+│   ├── jenkins-ci-cd.md      # Jenkins CI/CD pipeline architecture and setup guide
 │   └── phase_plan.md         # 6-phase milestone development roadmap
 ├── backend/                  # Python 3 + FastAPI Application
 │   ├── .env.example          # Backend environment variables template
@@ -388,8 +389,29 @@ docker compose ps
 # - Floci S3 Edge:  http://localhost:4566/_floci/health
 
 # Stop without destroying data
-docker compose stop
 ```
+
+---
+
+## 🚀 Jenkins CI/CD Pipeline
+
+The project includes a production-grade, zero-cost Declarative Jenkins Pipeline defined in [Jenkinsfile](file:///c:/antigravity_projects/cloud_backup_system/Jenkinsfile). It enforces end-to-end quality gates locally without requiring paid cloud CI services or real AWS credentials.
+
+For the comprehensive configuration guide, tool matrix, plugin recommendations, and step-by-step setup instructions, see:  
+👉 **[Jenkins CI/CD Architecture & Setup Guide](file:///c:/antigravity_projects/cloud_backup_system/docs/jenkins-ci-cd.md)**
+
+### Pipeline Quality Gates & Stages:
+1. **Checkout**: Pulls repository branch from Git SCM.
+2. **Environment Validation**: Non-destructive version audit of Python, Node, npm, Docker, and Compose.
+3. **Backend Dependencies**: Installs pinned requirements from `backend/requirements.txt`.
+4. **Backend Tests**: Executes 29 pytest unit tests generating JUnit XML (`reports/backend-junit.xml`).
+5. **Frontend Dependencies**: Reproducibly installs dependencies via `npm ci` / `npm install`.
+6. **Frontend Tests**: Executes 14 Vitest tests generating JUnit XML (`reports/frontend-junit.xml`).
+7. **Frontend Production Build**: Runs `tsc -b && vite build` and validates bundle artifacts.
+8. **Docker Compose Validation**: Validates Compose definitions for both default and `--profile s3` modes.
+9. **Container Image Build** *(Parameterized)*: Builds `cloud-backup-backend:ci` and `cloud-backup-frontend:ci`.
+10. **Floci S3 Integration Tests** *(Opt-in)*: Spins up local Floci container, verifies S3 persistence, and executes integration tests.
+11. **Summary & Cleanup**: Archives test results, archives `frontend/dist/**`, and safely cleans ephemeral workspace without wiping persistent volumes.
 
 ---
 

@@ -19,9 +19,9 @@ gantt
     section Phase 4
     Floci & Persistent Storage      :done, p4, after p3, 2d
     section Phase 5
-    Jenkins CI/CD Automation        :active, p5, after p4, 2d
+    Jenkins CI/CD Automation        :done, p5, after p4, 2d
     section Phase 6
-    Academic Documentation & Defense:p6, after p5, 1d
+    Academic Documentation & Defense:active, p6, after p5, 1d
 ```
 
 ---
@@ -85,10 +85,16 @@ gantt
 
 ---
 
-### Phase 5: Containerization Hardening & Local Jenkins CI/CD (Next)
-- [ ] Configure local Jenkins pipeline stages with automated build triggers.
-- [ ] Implement quality gates for backend test coverage and frontend bundle verification.
-- [ ] Container execution verification in local isolated test runners.
+### Phase 5: Containerization Hardening & Local Jenkins CI/CD (Completed)
+- [x] Author robust root `Jenkinsfile` with 11 declarative pipeline stages: Checkout, Environment Validation, Backend Dependencies, Backend Tests, Frontend Dependencies, Frontend Tests, Frontend Build, Docker Compose Validation, Container Image Build, Floci Integration Tests (Opt-in), and Post Actions / Cleanup.
+- [x] Implement cross-platform pipeline steps (`isUnix() ? sh(...) : bat(...)`) supporting native Windows Jenkins services and Linux Docker/agent runners.
+- [x] Configure JUnit test reporting for backend pytest (`reports/backend-junit.xml`) and frontend Vitest (`reports/frontend-junit.xml`) with failure preservation (`catchError(buildResult: 'FAILURE', stageResult: 'FAILURE')`).
+- [x] Configure production frontend Vite/TypeScript build verification and artifact archiving (`frontend/dist/**`).
+- [x] Validate Docker Compose specifications for both standalone local mode and multi-container `--profile s3` Floci mode without requiring running services.
+- [x] Configure container image builds for backend (`cloud-backup-backend:ci`) and frontend (`cloud-backup-frontend:ci`) gated by `BUILD_DOCKER_IMAGES` parameter.
+- [x] Configure opt-in Floci S3 emulator integration testing gated by `RUN_INTEGRATION_TESTS` parameter with safe container lifecycle management (`docker compose stop floci`) avoiding destructive volume wipes.
+- [x] Maintain strict zero-budget compliance: ₹0 cost, no GitHub Actions, no paid cloud services, and no real AWS dependencies.
+- [x] Author comprehensive Jenkins operational guide in `docs/jenkins-ci-cd.md` detailing architecture, tool requirements, plugin setup, pipeline creation, and troubleshooting.
 
 ---
 
