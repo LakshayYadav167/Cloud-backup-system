@@ -32,47 +32,64 @@ pipeline {
         stage('Environment Audit') {
             steps {
                 echo 'Verifying host execution environment and dependencies...'
-                // Windows & Linux agnostic check
-                bat(script: 'python --version && node --version', returnStatus: true)
+                script {
+                    if (isUnix()) {
+                        sh 'python3 --version || python --version'
+                        sh 'node --version && npm --version'
+                        sh 'docker --version || true'
+                    } else {
+                        bat 'python --version'
+                        bat 'node --version && npm.cmd --version'
+                        bat 'docker --version'
+                    }
+                }
             }
         }
 
         stage('Backend Tests') {
             steps {
-                echo 'Running pytest backend suite with coverage checks...'
+                echo 'Running pytest backend suite (isolated local SQLite and storage mocks)...'
                 dir("${env.BACKEND_DIR}") {
-                    /*
-                     * Note: In Phase 5, virtualenv activation and pytest
-                     * will be invoked here:
-                     * bat 'python -m pytest tests/ -v'
-                     */
-                    echo 'Backend test stage placeholder - ready for Phase 4/5 integration.'
+                    script {
+                        if (isUnix()) {
+                            sh 'python3 -m pytest tests/ -v'
+                        } else {
+                            bat 'python -m pytest tests/ -v'
+                        }
+                    }
                 }
             }
         }
 
         stage('Frontend Verification') {
             steps {
-                echo 'Running frontend typecheck and vitest suite...'
+                echo 'Running frontend test suite and compiling production bundle...'
                 dir("${env.FRONTEND_DIR}") {
-                    /*
-                     * Note: In Phase 5, npm test and npm run build
-                     * will be invoked here:
-                     * bat 'npm.cmd test -- --run'
-                     */
-                    echo 'Frontend test stage placeholder - ready for Phase 4/5 integration.'
+                    script {
+                        if (isUnix()) {
+                            sh 'npm test'
+                            sh 'npm run build'
+                        } else {
+                            bat 'npm.cmd test'
+                            bat 'npm.cmd run build'
+                        }
+                    }
                 }
             }
         }
 
-        stage('Container Build Dry-Run') {
+        stage('Container Config Validation') {
             steps {
                 echo 'Validating Dockerfile and Compose configurations locally (₹0 cost)...'
-                /*
-                 * In Phase 5:
-                 * bat 'docker compose -f docker/docker-compose.yml config'
-                 */
-                echo 'Docker validation placeholder - ready for Phase 5 containerization.'
+                script {
+                    if (isUnix()) {
+                        sh 'docker compose config'
+                        sh 'docker compose --profile s3 config'
+                    } else {
+                        bat 'docker compose config'
+                        bat 'docker compose --profile s3 config'
+                    }
+                }
             }
         }
     }

@@ -28,15 +28,17 @@ try:
 
         DATABASE_URL: str = Field(default="sqlite:///./data/cloud_backup.db")
 
-        # Storage Provider Configuration: "local" or "s3"
+        # Storage Provider Configuration: "local" (default) or "s3" (Floci emulator)
         STORAGE_PROVIDER: str = Field(default="local")
         LOCAL_STORAGE_PATH: str = Field(default="./data/storage")
         MAX_UPLOAD_SIZE_MB: int = Field(default=50)
 
-        # Optional S3 / MinIO Configuration (for local S3-compatible service)
-        S3_ENDPOINT_URL: Optional[str] = Field(default=None)
-        S3_ACCESS_KEY: str = Field(default="minioadmin")
-        S3_SECRET_KEY: str = Field(default="minioadmin")
+        # Floci / S3-compatible Object Storage Configuration
+        # Floci is an open-source (MIT), zero-cost local AWS emulator running on port 4566.
+        # Host endpoint: http://127.0.0.1:4566 | Docker Compose internal: http://floci:4566
+        S3_ENDPOINT_URL: Optional[str] = Field(default="http://127.0.0.1:4566")
+        S3_ACCESS_KEY: str = Field(default="test")
+        S3_SECRET_KEY: str = Field(default="test")
         S3_BUCKET_NAME: str = Field(default="cloud-backup-system")
         S3_REGION: str = Field(default="us-east-1")
         S3_USE_SSL: bool = Field(default=False)
@@ -76,9 +78,9 @@ except ImportError:
         LOCAL_STORAGE_PATH: str = os.getenv("LOCAL_STORAGE_PATH", "./data/storage")
         MAX_UPLOAD_SIZE_MB: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "50"))
 
-        S3_ENDPOINT_URL: Optional[str] = os.getenv("S3_ENDPOINT_URL")
-        S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY", "minioadmin")
-        S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY", "minioadmin")
+        S3_ENDPOINT_URL: Optional[str] = os.getenv("S3_ENDPOINT_URL", "http://127.0.0.1:4566")
+        S3_ACCESS_KEY: str = os.getenv("S3_ACCESS_KEY", "test")
+        S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY", "test")
         S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "cloud-backup-system")
         S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
         S3_USE_SSL: bool = os.getenv("S3_USE_SSL", "false").lower() in ("true", "1")

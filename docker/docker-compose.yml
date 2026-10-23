@@ -1,0 +1,80 @@
+# ==============================================================================
+# Cloud Backup System - Docker Compose Configuration
+# Zero-cost, local multi-container development environment
+# Supports:
+#   1. Default Local Mode:  docker compose -f docker/docker-compose.yml up
+#   2. Floci (S3) Mode:     docker compose -f docker/docker-compose.yml --profile s3 up
+# ==============================================================================
+
+services:
+  floci:
+    image: floci/floci:2.3.0
+    container_name: cloud_backup_floci
+    profiles:
+      - s3
+      - floci
+      - all
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      - FLOCI_STORAGE_MODE=persistent
+      - FLOCI_STORAGE_PERSISTENT_PATH=/app/data
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - floci_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4566/_floci/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: cloud_backup_backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - APP_ENV=development
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-local}
+      - DATABASE_URL=sqlite:////app/data/cloud_backup.db
+      - LOCAL_STORAGE_PATH=/app/data/storage
+      - MAX_UPLOAD_SIZE_MB=50
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://floci:4566}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-test}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-test}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-cloud-backup-system}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_USE_SSL=false
+      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:80,http://127.0.0.1:80
+    volumes:
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: cloud_backup_frontend
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+    name: cloud_backup_backend_data
+  floci_data:
+    name: cloud_backup_floci_data

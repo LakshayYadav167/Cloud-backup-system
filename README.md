@@ -13,21 +13,21 @@
 - **Frontend Architecture**: React 19 + Vite + TypeScript + Tailwind CSS (Light surface, navy text, emerald accents).
 - **Backend Architecture**: Python 3 + FastAPI + Uvicorn with asynchronous endpoints and OpenAPI documentation.
 - **Persistence Tier**: SQLite 3 with WAL mode for file metadata, immutable versions, audit logs, and backup snapshots.
-- **Storage Tier**: Local filesystem backing (default) with an object-oriented `StorageProvider` abstraction layer plus optional S3-compatible object store driver (MinIO Community, LocalStack, SeaweedFS).
-- **Testing**: `pytest` for backend API and unit tests (25 passing tests); `vitest` for frontend component verification.
-- **DevOps & CI/CD**: Local Jenkins pipeline (`Jenkinsfile`), Docker, and Docker Compose for zero-cost build automation.
+- **Storage Tier**: Local filesystem backing (default, ₹0 dependencies) with an object-oriented `StorageProvider` abstraction layer plus optional S3-compatible object store driver for **Floci** local AWS emulator (or LocalStack/SeaweedFS).
+- **Testing**: `pytest` for backend API, unit, and Floci integration tests (32 passing tests); `vitest` for frontend component verification (14 passing tests).
+- **DevOps & CI/CD**: Local Jenkins pipeline (`Jenkinsfile`), Docker multi-stage builds, and Docker Compose for zero-cost build and orchestration automation.
 
 ---
 
-## 🔍 MinIO Licensing & Zero-Cost Compliance Check
+## 🔍 Floci Local AWS Emulator & Zero-Cost Compliance Check
 
 | Topic | Analysis & Compliance Status |
 | :--- | :--- |
-| **MinIO Community** | Licensed under **GNU AGPLv3**. Free of charge (₹0) to download and run locally as a Docker container for student/internal use. However, AGPLv3 imposes strong network copyleft if modified server code is offered as a network service. |
-| **MinIO Commercial** | Proprietary license (MinIO Enterprise / AIStor). Requires paid subscriptions. **Not used.** |
-| **Python SDK (`boto3`)** | Uses `boto3` licensed under **Apache License 2.0** (permissive, zero-cost, maintained by AWS). Communicates via standard S3 protocol without any AGPLv3 infection of the backend code. |
-| **Permissive Alternatives** | If AGPLv3 is undesirable in commercial contexts, the backend seamlessly connects to **SeaweedFS** (Apache 2.0) or **LocalStack Community** (Apache 2.0) by simply updating `S3_ENDPOINT_URL`. |
-| **Default Guarantee** | **All core features operate out of the box with `STORAGE_PROVIDER=local` requiring zero external services.** MinIO is strictly an optional local enhancement. |
+| **Floci Local Emulator** | Licensed under the permissive **MIT License**. Free of charge (₹0), fully open-source local AWS emulator (`floci/floci:2.3.0`) running locally on port **4566**. Unlike proprietary or tiered tools, it requires no credit card, no token activation, and no paid feature tiers. |
+| **Persistence Engine** | Configured with `FLOCI_STORAGE_MODE=persistent` and `FLOCI_STORAGE_PERSISTENT_PATH=/app/data`. Writes synchronously to disk in the named Docker volume `cloud_backup_floci_data` so data persists across container restarts. |
+| **Python SDK (`boto3`)** | Uses `boto3` licensed under **Apache License 2.0** (permissive, zero-cost, maintained by AWS). Communicates via standard S3 protocol using path-style addressing and local dummy credentials (`test` / `test`). |
+| **Default Guarantee** | **All core features operate out of the box with `STORAGE_PROVIDER=local` requiring zero external services or Docker containers.** Floci is strictly an optional local enhancement. |
+| **Architectural Scope** | **Floci is a local developer emulator.** It runs on the local host machine and does NOT provide remote cloud deployment, geographical replication, or off-site disaster recovery. |
 
 ---
 
@@ -243,22 +243,152 @@ Open your browser to [http://localhost:5173](http://localhost:5173). The Vite re
 
 ---
 
-## 📦 Optional: Running with Local MinIO (S3 Mode)
+## 🛠️ Execution Modes & Windows PowerShell Run Guide
 
-To test the S3 adapter locally using free MinIO Community:
+### Mode A: Local Filesystem Mode (Default, Zero-Dependency, ₹0 Budget)
+
+No Docker or external services required. Everything runs locally on disk.
+
+#### 1. Install Backend Dependencies
 ```powershell
-# 1. Run MinIO container locally via Docker (₹0 cost)
-docker run -d -p 9000:9000 -p 9001:9001 --name minio_local -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" minio/minio:latest server /data --console-address ":9001"
+# Navigate to backend directory
+cd c:\antigravity_projects\cloud_backup_system\backend
 
-# 2. Update backend/.env:
-# STORAGE_PROVIDER=s3
-# S3_ENDPOINT_URL=http://127.0.0.1:9000
-# S3_ACCESS_KEY=minioadmin
-# S3_SECRET_KEY=minioadmin
-# S3_BUCKET_NAME=cloud-backup-system
+# Install python dependencies (FastAPI, uvicorn, pydantic, boto3, pytest)
+pip install -r requirements.txt
+```
 
-# 3. Re-run tests (the live MinIO integration test will automatically run and pass):
-python -m pytest tests/test_storage_s3.py -v
+#### 2. Start Backend API Server
+```powershell
+# In Terminal 1:
+cd c:\antigravity_projects\cloud_backup_system\backend
+$env:STORAGE_PROVIDER="local"
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+- Health Check: [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
+- Interactive Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+#### 3. Start Frontend Dashboard
+```powershell
+# In Terminal 2:
+cd c:\antigravity_projects\cloud_backup_system\frontend
+npm.cmd run dev
+```
+- Web Dashboard: [http://localhost:5173](http://localhost:5173)
+
+#### 4. Run Automated Unit & Integration Tests
+```powershell
+# Run backend test suite (isolated SQLite and mocked storage)
+cd c:\antigravity_projects\cloud_backup_system
+python -m pytest backend/tests -v
+
+# Run frontend test suite and verify production build
+cd c:\antigravity_projects\cloud_backup_system\frontend
+npm.cmd test
+npm.cmd run build
+```
+
+---
+
+### Mode B: Floci Mode (Local AWS/S3-Compatible Storage Emulator)
+
+Uses the free, open-source Floci emulator (`floci/floci:2.3.0`, MIT License, ₹0 budget) running locally on port **4566**.
+
+#### 1. Verify Docker is Running
+```powershell
+docker --version
+docker ps
+```
+
+#### 2. Start Floci Service with Persistent Storage
+```powershell
+# Start Floci via Docker Compose with dedicated persistent volume
+cd c:\antigravity_projects\cloud_backup_system
+docker compose --profile s3 up -d floci
+
+# Verify Floci health endpoint
+Invoke-RestMethod -Uri "http://localhost:4566/_floci/health"
+```
+
+#### 3. Start Backend with S3 Storage Selected
+```powershell
+# In Terminal 1:
+cd c:\antigravity_projects\cloud_backup_system\backend
+$env:STORAGE_PROVIDER="s3"
+$env:S3_ENDPOINT_URL="http://127.0.0.1:4566"
+$env:S3_ACCESS_KEY="test"
+$env:S3_SECRET_KEY="test"
+$env:S3_BUCKET_NAME="cloud-backup-system"
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+*(The backend's `S3CompatibleStorage` driver automatically and idempotently ensures the bucket `cloud-backup-system` exists).*
+
+#### 4. Start Frontend
+```powershell
+# In Terminal 2:
+cd c:\antigravity_projects\cloud_backup_system\frontend
+npm.cmd run dev
+```
+
+#### 5. Verify Full Lifecycle (Upload, Versioning, Download, Restore, Snapshot)
+You can perform these actions in the browser UI at [http://localhost:5173](http://localhost:5173) or via PowerShell:
+```powershell
+# 1. Upload initial file (Version 1)
+$form = @{ file = Get-Item "README.md" }
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/files/upload" -Method Post -Form $form
+
+# 2. Upload updated file with same filename (Creates Version 2)
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/files/upload" -Method Post -Form $form
+
+# 3. Create a point-in-time system backup snapshot
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/backups/trigger?notes=Verification+Snapshot" -Method Post
+
+# 4. View storage statistics reflecting S3/Floci
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/storage/stats"
+```
+
+#### 6. Test Data Persistence Across Emulator Restart
+```powershell
+# Restart Floci container
+docker restart cloud_backup_floci
+
+# Verify stored objects still exist in Floci after restart (returns 200 with metadata)
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/storage/stats"
+```
+
+#### 7. Stop Containers Without Deleting Persistent Volumes
+```powershell
+# Stop containers (preserves cloud_backup_floci_data and cloud_backup_backend_data volumes)
+docker compose stop
+
+# Do NOT run 'docker compose down -v' unless you explicitly want to purge all stored data!
+```
+
+---
+
+### Mode C: Full Multi-Container Docker Compose Stack
+
+Run the entire platform (Frontend + Backend + Floci) inside Docker:
+
+```powershell
+cd c:\antigravity_projects\cloud_backup_system
+
+# Validate compose configuration
+docker compose --profile s3 config
+
+# Build and start all three containers locally
+docker compose --profile s3 up -d --build
+
+# View running container status
+docker compose ps
+
+# Access application
+# - Web Dashboard:  http://localhost:5173
+# - REST API Docs:  http://localhost:8000/docs
+# - Floci S3 Edge:  http://localhost:4566/_floci/health
+
+# Stop without destroying data
+docker compose stop
 ```
 
 ---

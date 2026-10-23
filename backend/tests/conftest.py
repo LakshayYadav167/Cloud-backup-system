@@ -11,6 +11,25 @@ from app.core.config import settings
 from app.db.database import get_db, init_db
 from app.main import app
 from app.storage.local import LocalFileSystemStorage
+import socket
+from urllib.parse import urlparse
+
+
+def is_s3_endpoint_available(endpoint_url: str) -> bool:
+    """Check if the given HTTP/S3 endpoint is listening on its port."""
+    if not endpoint_url:
+        return False
+    try:
+        parsed = urlparse(endpoint_url)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
 
 
 @pytest.fixture

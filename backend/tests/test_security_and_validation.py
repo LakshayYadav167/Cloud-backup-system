@@ -85,3 +85,16 @@ def test_storage_stats_masks_absolute_paths(client: TestClient):
     assert "quota_bytes" in data
     # Location should be relative/masked
     assert not data["base_location"].startswith("C:\\")
+
+
+def test_s3_storage_failure_does_not_silently_fallback(client: TestClient, monkeypatch):
+    """When STORAGE_PROVIDER=s3 is configured and unreachable, upload fails with 500 and does not fallback."""
+    monkeypatch.setattr(settings, "STORAGE_PROVIDER", "s3")
+    monkeypatch.setattr(settings, "S3_ENDPOINT_URL", "http://127.0.0.1:59999")
+
+    res = client.post(
+        "/api/v1/files/upload",
+        files={"file": ("unreachable_test.txt", BytesIO(b"data"), "text/plain")},
+    )
+    assert res.status_code == 500
+    assert "storage provider failed" in res.json()["detail"].lower()

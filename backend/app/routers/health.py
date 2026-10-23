@@ -22,8 +22,21 @@ async def health_check(db: sqlite3.Connection = Depends(get_db)):
     except Exception:
         db_status = "unavailable"
 
+    # Check active storage driver availability
+    storage_status = "ready"
+    if settings.STORAGE_PROVIDER.lower() == "s3":
+        try:
+            from app.storage.s3 import S3CompatibleStorage
+            driver = S3CompatibleStorage(auto_create_bucket=False)
+            if not driver.is_available():
+                storage_status = "unavailable"
+        except Exception:
+            storage_status = "unavailable"
+
+    is_healthy = db_status == "connected" and storage_status == "ready"
+
     return HealthResponse(
-        status="healthy" if db_status == "connected" else "degraded",
+        status="healthy" if is_healthy else "degraded",
         app_name=settings.APP_NAME,
         version=settings.APP_VERSION,
         environment=settings.APP_ENV,

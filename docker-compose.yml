@@ -1,0 +1,100 @@
+# ==============================================================================
+# Cloud Backup System - Docker Compose Configuration
+# Zero-cost, local multi-container development environment
+# Supports:
+#   1. Default Local Mode:  docker compose up
+#   2. Floci (S3) Mode:     docker compose --profile s3 up
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Optional: Floci AWS/S3-Compatible Local Emulator (Port 4566)
+  # Activated with: docker compose --profile s3 up  (or docker compose up floci)
+  # Always free (MIT License, ₹0 budget), persistent data stored in Docker volume
+  # ----------------------------------------------------------------------------
+  floci:
+    image: floci/floci:2.3.0
+    container_name: cloud_backup_floci
+    profiles:
+      - s3
+      - floci
+      - all
+    ports:
+      # Bound locally to prevent public exposure
+      - "127.0.0.1:4566:4566"
+    environment:
+      # Enforce synchronous disk persistence
+      - FLOCI_STORAGE_MODE=persistent
+      - FLOCI_STORAGE_PERSISTENT_PATH=/app/data
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - floci_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4566/_floci/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # FastAPI Application Backend (Port 8000)
+  # Works in local filesystem mode by default without requiring Floci
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: cloud_backup_backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - APP_ENV=development
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-local}
+      - DATABASE_URL=sqlite:////app/data/cloud_backup.db
+      - LOCAL_STORAGE_PATH=/app/data/storage
+      - MAX_UPLOAD_SIZE_MB=50
+      # Internal Docker network hostname for Floci emulator
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://floci:4566}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-test}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-test}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-cloud-backup-system}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_USE_SSL=false
+      - CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:80,http://127.0.0.1:80
+    volumes:
+      # Persistent named volume for SQLite database and local files
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # React + Vite + TypeScript Dashboard Frontend (Port 5173)
+  # Served via Nginx reverse proxy forwarding /api to the backend
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: cloud_backup_frontend
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ==============================================================================
+# Persistent Named Volumes (Preserves data across container stop/restarts)
+# ==============================================================================
+volumes:
+  backend_data:
+    name: cloud_backup_backend_data
+  floci_data:
+    name: cloud_backup_floci_data

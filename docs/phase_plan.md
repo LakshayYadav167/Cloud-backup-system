@@ -17,9 +17,9 @@ gantt
     section Phase 3
     Frontend Dashboard & UI         :done, p3, after p2, 2d
     section Phase 4
-    Automated Testing & Coverage    :active, p4, after p3, 2d
+    Floci & Persistent Storage      :done, p4, after p3, 2d
     section Phase 5
-    Docker & Jenkins CI/CD Pipeline :p5, after p4, 2d
+    Jenkins CI/CD Automation        :active, p5, after p4, 2d
     section Phase 6
     Academic Documentation & Defense:p6, after p5, 1d
 ```
@@ -70,17 +70,25 @@ gantt
 
 ---
 
-### Phase 4: Automated Testing & Verification
-- [ ] Frontend unit & component tests using `Vitest` and `React Testing Library`.
-- [ ] End-to-end integration tests (Upload -> View in table -> Check stats -> Trigger backup -> Download file -> Restore previous version).
+### Phase 4: Floci Integration, Docker Compose & Persistent Storage (Completed)
+- [x] Official Floci (`floci/floci:2.3.0`, MIT License, ₹0 budget) local AWS emulator verified on port 4566.
+- [x] Verified Floci persistence configuration (`FLOCI_STORAGE_MODE=persistent`, `FLOCI_STORAGE_PERSISTENT_PATH=/app/data`).
+- [x] Configured `S3CompatibleStorage` driver with path-style addressing and idempotent bucket creation.
+- [x] Verified that failure to reach S3 does not silently fallback to local storage; explicit error propagation.
+- [x] Verified data persistence across Floci container restarts using named Docker volume `cloud_backup_floci_data`.
+- [x] Multi-stage production `Dockerfile.backend` (Python 3.12 slim, health check, uvicorn).
+- [x] Multi-stage production `Dockerfile.frontend` (Node 20 alpine + Nginx 1.27 alpine reverse proxy).
+- [x] Author root `docker-compose.yml` supporting default local filesystem mode and `--profile s3` Floci mode.
+- [x] Validated `docker compose config` and `docker compose --profile s3 config`.
+- [x] Comprehensive pytest test suite with mocked S3 unit tests and live Floci integration test.
+- [x] Updated root `Jenkinsfile` for local cross-platform build validation and unit testing.
 
 ---
 
-### Phase 5: Containerization & Local Jenkins CI/CD
-- [ ] Create production-ready `Dockerfile` for backend (multi-stage Python runtime).
-- [ ] Create production-ready `Dockerfile` for frontend (multi-stage Vite build + Nginx alpine).
-- [ ] Author `docker-compose.yml` linking frontend, backend, and optional local MinIO container.
-- [ ] Configure local Jenkins pipeline via `Jenkinsfile` for automated build and test quality gates.
+### Phase 5: Containerization Hardening & Local Jenkins CI/CD (Next)
+- [ ] Configure local Jenkins pipeline stages with automated build triggers.
+- [ ] Implement quality gates for backend test coverage and frontend bundle verification.
+- [ ] Container execution verification in local isolated test runners.
 
 ---
 

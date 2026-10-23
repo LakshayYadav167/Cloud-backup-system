@@ -15,7 +15,7 @@ The system empowers users to:
 
 ---
 
-## 2. Zero-Budget Philosophy & MinIO Licensing Analysis
+## 2. Zero-Budget Philosophy & Local Storage Emulation Analysis
 
 Every component is intentionally selected to require **no credit card, no cloud provider account, no subscription, and no paid third-party API**:
 
@@ -24,22 +24,24 @@ Every component is intentionally selected to require **no credit card, no cloud 
 | **Frontend** | React 19 + Vite + TypeScript + Tailwind CSS | MIT | Fast compilation, modern UX, open source, zero licensing fees. |
 | **Backend** | Python 3.10+ + FastAPI + Uvicorn | MIT / BSD | High-throughput asynchronous REST API, auto-generated OpenAPI docs. |
 | **Database** | SQLite 3 with WAL Mode | Public Domain | Serverless, zero-maintenance, embedded relational engine. |
-| **Storage (Primary)** | Local Host Filesystem | N/A | Zero storage egress or bucket cost; default out-of-the-box mode. |
-| **Storage (Optional S3)** | S3-Compatible Driver (boto3) | Apache 2.0 | Connects to local MinIO, LocalStack, or SeaweedFS without vendor lock-in. |
+| **Storage (Primary)** | Local Host Filesystem | N/A | Zero storage egress or bucket cost; default out-of-the-box working mode. |
+| **Storage (Optional S3)** | Floci Local AWS Emulator + `boto3` | MIT / Apache 2.0 | Drop-in open-source AWS S3 emulator running on port 4566; zero subscription cost. |
+| **Containerization** | Docker & Docker Compose | Apache 2.0 | Multi-container local orchestration with persistent Docker volumes. |
 | **Testing** | pytest + Vitest | MIT | Industry-standard open-source testing frameworks. |
 
-### 2.1 MinIO Licensing & Zero-Cost Verification
-- **MinIO Editions**:
-  - *MinIO Enterprise / AIStor*: Commercial, proprietary licensing, requires paid subscription. **Not used.**
-  - *MinIO Community Server*: Free to download and run self-hosted locally under **GNU AGPLv3**. For academic, personal, and internal student projects, it involves ₹0 financial cost. However, AGPLv3 contains strong network copyleft clauses (Section 13) requiring modified server code provided over a network to be open-sourced under AGPLv3.
-- **Client Selection (`boto3`)**:
-  - We use the standard AWS SDK for Python (`boto3`), licensed under the permissive **Apache License 2.0**. This avoids AGPLv3 dependency infection in the backend application code while communicating with any S3-compatible service over standard HTTP S3 protocols.
-- **Maintained Genuinely Free / Open-Source Alternatives**:
-  - If AGPLv3 copyleft is undesirable in commercial environments, developers can swap MinIO for:
-    1. **SeaweedFS** (Apache 2.0 License, fully open-source, maintained, native S3 API, zero-cost).
-    2. **LocalStack Community** (Apache 2.0 License for core emulation, zero-cost).
-- **Core Guarantee**:
-  - **The system does NOT require MinIO or any external service to function.** `LocalFileSystemStorage` is the default driver. All core features (uploads, downloads, versioning, restore, backups) operate 100% locally on disk at ₹0 cost.
+### 2.1 Floci Local AWS Emulator Analysis
+- **What is Floci?**:
+  - Floci (`floci/floci:2.3.0`) is a lightweight, MIT-licensed, completely free local AWS emulator built on Quarkus native binaries. It runs locally on port 4566 and emulates core AWS services including Amazon S3, DynamoDB, SQS, and IAM.
+  - Unlike commercial or tiered alternatives, Floci provides **all emulated features for ₹0** with no license keys, no token activations, and no feature gating.
+- **Persistence Model**:
+  - In our architecture, Floci is configured with `FLOCI_STORAGE_MODE=persistent` and `FLOCI_STORAGE_PERSISTENT_PATH=/app/data`, mapped to the named Docker volume `cloud_backup_floci_data`.
+  - State and stored objects are written synchronously to disk, ensuring data survives container restarts and stop cycles without data loss.
+- **Client Protocol (`boto3`)**:
+  - The backend communicates with Floci via standard AWS SDK `boto3` using path-style addressing (`s3={"addressing_style": "path"}`) and dummy development credentials (`test` / `test`).
+  - No connection to real AWS or external endpoints is ever initiated.
+- **Important Scope Clarification**:
+  - **Floci is a local developer emulator running on your own machine.** It does NOT provide off-site disaster recovery, remote geographical redundancy, or cloud resilience.
+  - **The system does NOT require Floci to function.** Local filesystem storage (`LocalFileSystemStorage`) is the default driver. All core features operate out of the box with `STORAGE_PROVIDER=local` with zero external dependencies.
 
 ---
 

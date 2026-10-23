@@ -22,6 +22,26 @@ except ImportError:
     ClientError = Exception
     EndpointConnectionError = Exception
 
+import socket
+from urllib.parse import urlparse
+
+
+def is_s3_endpoint_available(endpoint_url: Optional[str]) -> bool:
+    """Check if the given HTTP/S3 endpoint is listening on its port."""
+    if not endpoint_url:
+        return False
+    try:
+        parsed = urlparse(endpoint_url)
+        host = parsed.hostname or "localhost"
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
+
 
 class S3CompatibleStorage(StorageProvider):
     """S3-compatible object storage driver."""
@@ -67,13 +87,21 @@ class S3CompatibleStorage(StorageProvider):
         if auto_create_bucket:
             self._ensure_bucket()
 
-    def _ensure_bucket(self) -> None:
-        """Create bucket if it does not already exist."""
+    def is_available(self) -> bool:
+        """Check if S3/Floci emulator endpoint is reachable and bucket accessible (ensures bucket idempotently)."""
+        return self._ensure_bucket()
+
+    def _ensure_bucket(self) -> bool:
+        """Create bucket idempotently if it does not already exist.
+
+        Returns True if bucket exists or was created, False if S3 service is unreachable.
+        """
         try:
             self.client.head_bucket(Bucket=self.bucket_name)
+            return True
         except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code")
-            if error_code in ("404", "NoSuchBucket"):
+            error_code = str(e.response.get("Error", {}).get("Code", ""))
+            if error_code in ("404", "NoSuchBucket", "400", "NotFound"):
                 try:
                     if self.region == "us-east-1":
                         self.client.create_bucket(Bucket=self.bucket_name)
@@ -82,11 +110,13 @@ class S3CompatibleStorage(StorageProvider):
                             Bucket=self.bucket_name,
                             CreateBucketConfiguration={"LocationConstraint": self.region},
                         )
+                    return True
                 except Exception:
-                    pass
+                    return False
+            return False
         except Exception:
-            # Service may not be reachable during initialization in testing
-            pass
+            # Service may not be reachable during initialization
+            return False
 
     def _sanitize_key(self, object_key: str) -> str:
         if not object_key or not object_key.strip():
