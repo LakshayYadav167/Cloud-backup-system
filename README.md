@@ -14,9 +14,9 @@
 - **Backend Architecture**: Python 3 + FastAPI + Uvicorn with asynchronous endpoints and OpenAPI documentation.
 - **Persistence Tier**: SQLite 3 with WAL mode for file metadata, immutable versions, audit logs, and backup snapshots.
 - **Storage Tier**: Local filesystem backing (default, ₹0 dependencies) with an object-oriented `StorageProvider` abstraction layer plus optional S3-compatible object store driver for **Floci** local AWS emulator (or LocalStack/SeaweedFS).
-- **Testing**: `pytest` for backend API, unit, E2E smoke, archive recovery, and Floci integration tests (43 passed, 2 skipped when Floci offline); `vitest` for frontend component verification (19 passed across 5 test suites).
+- **Testing**: `pytest` for backend API, unit, E2E smoke, archive recovery, and Floci integration tests (45 passed, 2 skipped when Floci offline); `vitest` for frontend component verification (19 passed across 5 test suites).
 - **Portable Backup Archives (Phase 7)**: Independently restorable standard ZIP archives with root `manifest.json` (v1.0.0), binary payloads, SHA-256 integrity verification, and safe conflict strategies.
-- **DevOps & CI/CD**: Local Jenkins pipeline (`Jenkinsfile`), Docker multi-stage builds, and Docker Compose for zero-cost build and orchestration automation.
+- **DevOps & CI/CD**: Cloud-native GitHub Actions CI workflow ([.github/workflows/ci.yml](file:///c:/antigravity_projects/cloud_backup_system/.github/workflows/ci.yml)) enforcing automated zero-cost quality gates on standard GitHub-hosted runners; local declarative Jenkins pipeline ([Jenkinsfile](file:///c:/antigravity_projects/cloud_backup_system/Jenkinsfile)) preserved as a self-hosted alternative; Docker Compose orchestration.
 
 ---
 
@@ -576,28 +576,56 @@ Remove-Item -Path $RecoveryDir -Recurse -Force
 
 ---
 
-## 🚀 Jenkins CI/CD Pipeline
+## 🚀 Continuous Integration (CI/CD)
 
-The project includes a production-grade, zero-cost Declarative Jenkins Pipeline defined in [Jenkinsfile](file:///c:/antigravity_projects/cloud_backup_system/Jenkinsfile). It enforces end-to-end quality gates locally without requiring paid cloud CI services or real AWS credentials.
+The Cloud Backup System implements automated, zero-cost continuous integration quality gates to guarantee software reliability without requiring paid cloud infrastructure.
 
-For the comprehensive configuration guide, tool matrix, plugin recommendations, and step-by-step setup instructions, see:  
+---
+
+### Primary Option: GitHub Actions CI Pipeline (Strict ₹0 Cost)
+
+The repository provides a cloud-native GitHub Actions workflow defined in [.github/workflows/ci.yml](file:///c:/antigravity_projects/cloud_backup_system/.github/workflows/ci.yml). It executes automatically on pushes and pull requests to `main`, and supports parameterized manual triggers via `workflow_dispatch`.
+
+For comprehensive operational instructions, billing limit guidance, and step-by-step verification, see:  
+👉 **[GitHub Actions CI/CD Architecture & Setup Guide](file:///c:/antigravity_projects/cloud_backup_system/docs/github-actions-ci.md)**
+
+#### Key Highlights & ₹0 Cost Safeguards:
+- **Runner Environment**: Standard GitHub-hosted `ubuntu-latest` Linux runners.
+- **Strict ₹0 Budget Compliance**: Operates entirely within GitHub's included monthly allowance (2,000 minutes/month for private repos; unlimited for public repos).
+- **Least-Privilege Security**: Configured with `permissions: contents: read` and no exposed secrets.
+- **Fail-Fast Timeouts**: Enforces `timeout-minutes: 10` on each job to prevent runaway processes.
+- **Concurrency Control**: Automatically cancels obsolete in-progress builds when newer commits are pushed.
+- **Zero Artifact Storage Overhead**: Does not upload unnecessary build artifacts, keeping included storage clean.
+- **Zero Deployment Leaks**: Builds container images and frontend bundles purely for compile-time validation; never pushes to registries or deploys to cloud servers.
+
+#### Workflow Jobs & Quality Gates:
+1. **Backend Verification (`backend`)**:
+   - Sets up Python 3.12 with pip cache.
+   - Installs dependencies from `backend/requirements.txt`.
+   - Executes 47 pytest test items: **45 passed, 2 legitimately skipped** (live Floci tests skip gracefully when the emulator is offline).
+2. **Frontend Verification (`frontend`)**:
+   - Sets up Node.js 20 LTS with npm cache.
+   - Executes strict reproducible `npm ci` from `frontend/package-lock.json`.
+   - Runs 19 Vitest unit and component tests across 5 test suites (**19 passed, 0 errors**).
+   - Compiles TypeScript and builds production distribution bundle (`tsc -b && vite build`), asserting presence of `dist/index.html`.
+3. **Docker Compose & Container Build Verification (`docker-validation`)**:
+   - Validates `docker compose config` for both default local and `--profile s3` Floci configurations.
+   - Builds local container images (`cloud-backup-backend:ci` and `cloud-backup-frontend:ci`) to ensure build reproducibility.
+4. **Optional Floci S3 Live Integration (`floci-integration`)**:
+   - Opt-in parameter via `workflow_dispatch` (`run_floci_integration = true`).
+   - Spins up local Floci container, validates health on port 4566, runs live S3 tests, and cleanly stops container.
+
+---
+
+### Alternative / Historical Option: Local Jenkins CI/CD Pipeline
+
+The project also maintains a production-grade Declarative Jenkins Pipeline defined in [Jenkinsfile](file:///c:/antigravity_projects/cloud_backup_system/Jenkinsfile) as an offline, self-hosted CI alternative.
+
+For the Jenkins configuration guide, tool matrix, plugin recommendations, and setup instructions, see:  
 👉 **[Jenkins CI/CD Architecture & Setup Guide](file:///c:/antigravity_projects/cloud_backup_system/docs/jenkins-ci-cd.md)**
 
-### Pipeline Quality Gates & Stages:
-1. **Checkout**: Pulls repository branch from Git SCM.
-2. **Environment Validation**: Non-destructive version audit of Python, Node, npm, Docker, and Compose.
-3. **Backend Dependencies**: Installs pinned requirements from `backend/requirements.txt`.
-4. **Backend Tests**: Executes 45 pytest unit and E2E tests generating JUnit XML (`reports/backend-junit.xml`).
-5. **Frontend Dependencies**: Reproducibly installs dependencies via strict `npm ci`.
-6. **Frontend Tests**: Executes 19 Vitest tests generating JUnit XML (`reports/frontend-junit.xml`).
-7. **Frontend Production Build**: Runs `tsc -b && vite build` and validates bundle artifacts.
-8. **Docker Compose Validation**: Validates Compose definitions for both default and `--profile s3` modes.
-9. **Container Image Build** *(Parameterized)*: Builds `cloud-backup-backend:ci` and `cloud-backup-frontend:ci`.
-10. **Floci S3 Integration Tests** *(Opt-in)*: Spins up local Floci container, verifies S3 persistence, and executes integration tests.
-11. **Summary & Cleanup**: Archives test results, archives `frontend/dist/**`, and safely cleans ephemeral workspace without wiping persistent volumes.
-
 > [!NOTE]
-> **Jenkins Verification Status**: The Declarative `Jenkinsfile`, parameterization, and Groovy syntax validation have been verified using Jenkins' internal compilation engine. Actual Jenkins pipeline job execution in the Jenkins UI and Windows service-account Docker socket troubleshooting have been intentionally deferred. No live build run in Jenkins has been claimed.
+> **Jenkins Verification Status**: The Declarative `Jenkinsfile`, parameterization, and Groovy syntax validation have been verified using Jenkins' internal compilation engine. Actual Jenkins pipeline job execution in the Jenkins UI and Windows service-account Docker socket troubleshooting have been intentionally deferred in favor of the turnkey GitHub Actions workflow. No live build run in Jenkins has been claimed.
 
 ---
 
@@ -697,5 +725,6 @@ docker compose stop floci
 | **Frontend UI & Tests** | `vitest run` & `tsc -b && vite build` | ✅ **19 passed, 0 errors** | File inventory, version drawer, snapshots, and archive operations verified. |
 | **Docker Compose Config** | `docker compose config` | ✅ **Validated** | Default and `--profile s3` validated. |
 | **Container Images** | `docker compose build` | ✅ **Built** | `cloud_backup_system-backend` and `cloud_backup_system-frontend` built cleanly. |
-| **Jenkins CI/CD** | Groovy syntax & declarative compilation | ⏸️ **Syntax Validated** | Live pipeline job execution in Jenkins UI deferred until final task. |
+| **GitHub Actions CI** | PyYAML validation & local test suite | ✅ **Validated** | `.github/workflows/ci.yml` syntax validated; 3 parallel jobs; strict ₹0 budget safeguards. |
+| **Jenkins CI/CD** | Groovy syntax & declarative compilation | ⏸️ **Syntax Validated** | Live pipeline job execution in Jenkins UI deferred in favor of GitHub Actions. |
 

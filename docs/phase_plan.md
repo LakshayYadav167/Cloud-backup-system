@@ -118,3 +118,18 @@ gantt
 - [x] Frontend dashboard integration (`frontend/src/components/BackupSnapshots.tsx`): added "Portable Archives (.zip)" sub-view with Export Archive, Verify Archive inspection card, and Restore Archive card with conflict selector, safety confirmation, and reactive state sync. Added 5 Vitest tests (`frontend/tests/BackupArchives.test.tsx`).
 - [x] Complete zero-budget compliance: ₹0 budget maintained, standard library implementation, no paid cloud services, and preserved existing SQLite snapshots and file management untouched.
 
+---
+
+### Phase 9: GitHub Actions CI/CD Migration (Strict ₹0 Cost) (Completed)
+- [x] Pre-implementation inspection: verified Git working tree status (clean), latest commit history, verified no remote repository configured (`git remote -v` empty), verified branch (`main`), inspected `Jenkinsfile`, `requirements.txt`, `frontend/package.json`, `package-lock.json`, and Docker Compose files.
+- [x] Strict ₹0 cost policy enforcement: designed workflow utilizing standard GitHub-hosted `ubuntu-latest` Linux runners within GitHub's free allowance (2,000 monthly minutes for private repos, unlimited for public repos). Zero paid marketplace actions, zero real AWS credentials, zero external cloud services, and zero deployment overhead.
+- [x] Created separate GitHub Actions workflow [`.github/workflows/ci.yml`](file:///c:/antigravity_projects/cloud_backup_system/.github/workflows/ci.yml) without altering existing `Jenkinsfile`.
+- [x] Configured workflow triggers for `push` and `pull_request` on `main`, plus manual `workflow_dispatch` with parameterization (`build_docker`, `run_floci_integration`).
+- [x] Enforced least-privilege security (`permissions: contents: read`), concurrency cancellation (`cancel-in-progress: true`), and 10-minute timeout bounds on all jobs.
+- [x] Backend verification job: Python 3.12 with pip cache, executes 47 pytest test items (45 passed, 2 legitimately skipped when Floci is offline; 0 failed) using `-v -ra` reporting.
+- [x] Frontend verification job: Node.js 20 LTS with npm cache, strict reproducible `npm ci`, 19 Vitest component tests passed, TypeScript verification and production build (`tsc -b && vite build`), and `dist/index.html` assertion without unnecessary artifact uploads.
+- [x] Docker & Compose validation job: dry-run schema validation of `docker compose config` (default and S3 profiles) and local container image builds (`cloud-backup-backend:ci` and `cloud-backup-frontend:ci`) for compile verification only (no registries or deployment).
+- [x] Optional Floci integration job: isolated opt-in job on manual dispatch to spin up Floci container, verify health, run live S3 tests, and safely stop container without data volume loss.
+- [x] Author comprehensive CI/CD guide in [`docs/github-actions-ci.md`](file:///c:/antigravity_projects/cloud_backup_system/docs/github-actions-ci.md) and updated `README.md`, preserving Jenkins documentation as a historical alternative option.
+
+
