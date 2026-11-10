@@ -120,9 +120,17 @@ gantt
 
 ---
 
+### Phase 8: System Verification, Isolated Recovery Audit & Release Readiness (Completed)
+- [x] Genuine disaster-recovery verification script (`scripts/verify-archive-recovery.py`) testing multi-version export, format v1.0.0 manifest parsing, corrupted blob rejection, traversal prevention, and clean restore into an isolated environment.
+- [x] Zero-catalog mutation validation: proved that corrupted and traversal archives leave target databases and storage completely untouched.
+- [x] Ephemeral environment lifecycle: verified temporary storage and database cleanup post-audit without touching persistent production databases.
+- [x] Refactored frontend UI to remove internal budget references in favor of professional product-focused labels (`Self-Hosted`, `Backup & Recovery Active`, `Local Disk`).
+
+---
+
 ### Phase 9: GitHub Actions CI/CD Migration (Strict ₹0 Cost) (Completed)
 - [x] Pre-implementation inspection: verified Git working tree status (clean), latest commit history, verified no remote repository configured (`git remote -v` empty), verified branch (`main`), inspected `Jenkinsfile`, `requirements.txt`, `frontend/package.json`, `package-lock.json`, and Docker Compose files.
-- [x] Strict ₹0 cost policy enforcement: designed workflow utilizing standard GitHub-hosted `ubuntu-latest` Linux runners within GitHub's free allowance (2,000 monthly minutes for private repos, unlimited for public repos). Zero paid marketplace actions, zero real AWS credentials, zero external cloud services, and zero deployment overhead.
+- [x] Strict ₹0 cost policy enforcement: designed workflow utilizing standard GitHub-hosted `ubuntu-latest` Linux runners. Included runner usage depends on current GitHub policies and account eligibility; GitHub Billing and spending limits must be checked before enabling workflows to preserve the strict ₹0 policy. Zero paid marketplace actions, zero real AWS credentials, zero external cloud services, and zero deployment overhead.
 - [x] Created separate GitHub Actions workflow [`.github/workflows/ci.yml`](file:///c:/antigravity_projects/cloud_backup_system/.github/workflows/ci.yml) without altering existing `Jenkinsfile`.
 - [x] Configured workflow triggers for `push` and `pull_request` on `main`, plus manual `workflow_dispatch` with parameterization (`build_docker`, `run_floci_integration`).
 - [x] Enforced least-privilege security (`permissions: contents: read`), concurrency cancellation (`cancel-in-progress: true`), and 10-minute timeout bounds on all jobs.
@@ -131,5 +139,42 @@ gantt
 - [x] Docker & Compose validation job: dry-run schema validation of `docker compose config` (default and S3 profiles) and local container image builds (`cloud-backup-backend:ci` and `cloud-backup-frontend:ci`) for compile verification only (no registries or deployment).
 - [x] Optional Floci integration job: isolated opt-in job on manual dispatch to spin up Floci container, verify health, run live S3 tests, and safely stop container without data volume loss.
 - [x] Author comprehensive CI/CD guide in [`docs/github-actions-ci.md`](file:///c:/antigravity_projects/cloud_backup_system/docs/github-actions-ci.md) and updated `README.md`, preserving Jenkins documentation as a historical alternative option.
+
+---
+
+### Phase 10: Local Application End-to-End Acceptance Testing (Completed)
+- [x] Live backend verification on `http://127.0.0.1:8000`: verified `/api/v1/health` and `/api/v1/storage/stats` reporting SQLite connectivity and local filesystem storage.
+- [x] Live frontend verification on `http://localhost:5173`: verified Vite reverse proxy forwarding `/api/v1` to FastAPI backend with zero console errors and zero internal budget references.
+- [x] Executed 11-step end-to-end acceptance lifecycle: temporary file upload, listing, download and SHA-256 match, version 2 upload, version lineage inspection, historical download, atomic rollback to v1, archive export, archive verify, isolated restore into ephemeral target, and byte-for-byte SHA-256 comparison.
+- [x] Verified system snapshots, soft deletion, and 404 error handling for missing files and invalid versions.
+- [x] Full test suite execution: Backend pytest (45 passed, 2 skipped when Floci offline; 0 failed), Frontend Vitest (19 passed across 5 test suites; 0 failed), Frontend production bundle compilation (`tsc -b && vite build` in 4.38s), and Docker Compose validation.
+
+---
+
+### Phase 11: Docker Access Diagnosis & Floci Integration Verification (Completed)
+- [x] Diagnosed named pipe access error (`open //./pipe/docker_engine: Access is denied`): identified as standard terminal Low Mandatory Level sandbox boundary preventing reading `~/.docker/config.json`. Verified user is an enabled member of `LAPTOP-5OH1I31J\docker-users` and Docker Desktop 4.43.2 WSL2 engine is active and healthy via `desktop-linux` context (`//./pipe/dockerDesktopLinuxEngine`).
+- [x] Zero-cost, zero-permission-change resolution: running Docker commands outside the low-integrity sandbox executed with exit code 0 without modifying Windows service accounts or group memberships.
+- [x] Preserved existing Docker containers and persistent volume `cloud_backup_floci_data` without running destructive prune or volume wipe commands.
+- [x] Started local Floci S3 emulator (`floci/floci:2.3.0`, MIT License, ₹0 budget) on port 4566 via `docker compose --profile s3 up -d floci`.
+- [x] Verified S3 bucket `cloud-backup-system` with path-style addressing; executed upload, retrieval, and SHA-256 checksum comparison.
+- [x] Verified persistence across container restart (`docker restart cloud_backup_floci`): test object remained 100% byte-for-byte intact after restart.
+- [x] Executed live Floci integration tests: `test_floci_e2e_full_lifecycle` and `test_live_floci_storage_lifecycle` both PASSED. Full backend pytest suite achieved **47 passed, 0 skipped, 0 failed (100% passing)**.
+
+---
+
+### Phase 12: GitHub Repository Readiness, Security & Zero-Cost CI Audit (Completed)
+- [x] Pre-publication security audit: scanned all 87 tracked files for credentials, private keys, API keys, personal emails, active `.env` files, and database files (0 secrets detected).
+- [x] `.gitignore` hardening: added targeted archive exclusion rules avoiding blanket `*.zip` to prevent hiding legitimate assets or fixtures.
+- [x] GitHub Actions cost optimization: added `paths-ignore` (`docs/**`, `*.md`, `.gitignore`) to prevent unnecessary CI runner consumption on documentation-only edits.
+- [x] Documentation alignment: updated test metrics across documentation to reflect 47 backend and 19 frontend passing tests; structured the professional README roadmap.
+
+---
+
+### Phase 13: Professional GitHub Documentation & Repository Preparation (In Progress)
+- [x] Hardened `.gitignore` with targeted archive patterns (`cloud_backup_archive_*.zip`, `backup_archive_*.zip`, `*.archive.zip`, `*.zip.tmp*`) preserving legitimate test fixtures and repository assets.
+- [x] Synchronized milestone roadmap across `docs/phase_plan.md` accurately recording completion of Phases 8 through 12.
+- [x] Refined `docs/jenkins-ci-cd.md` to clearly distinguish historical Phase 5 baseline (29 unit tests) from current Phase 10 & 11 verified test suites (47 pytest, 19 vitest).
+- [x] Authored comprehensive 20-section professional GitHub `README.md` adhering to strict factual accuracy: local Floci S3 emulation vs. real AWS, single-user demonstration scope, verified test results (47 backend / 19 frontend), and license disclosures.
+- [ ] Future GitHub publication (pending explicit user remote configuration and manual push).
 
 

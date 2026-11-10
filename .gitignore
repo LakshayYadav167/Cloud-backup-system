@@ -94,6 +94,12 @@ backend/data/storage/*
 !backend/data/.gitkeep
 !backend/data/storage/.gitkeep
 
+# Generated Portable Backup Archives (targeted patterns avoiding blanket *.zip to preserve assets/fixtures)
+cloud_backup_archive_*.zip
+backup_archive_*.zip
+*.archive.zip
+*.zip.tmp*
+
 # ------------------------------------------------------------------------------
 # Operating System & IDE Files
 # ------------------------------------------------------------------------------

@@ -52,9 +52,9 @@ flowchart TD
 | **1** | **Checkout** | Retrieves the latest source code from the configured Git branch. | Working tree |
 | **2** | **Environment Audit** | Logs versions of Python, Node, npm, Docker, and Docker Compose without leaking secrets. | Console logs |
 | **3** | **Backend Dependencies** | Installs pinned packages from `backend/requirements.txt` into the runner environment. | Python virtualenv/cache |
-| **4** | **Backend Tests** | Executes 29 isolated Pytest unit and security tests. Generates JUnit XML. | `backend/reports/backend-junit.xml` |
+| **4** | **Backend Tests** | Executes 47 isolated Pytest unit and security tests. Generates JUnit XML. | `backend/reports/backend-junit.xml` |
 | **5** | **Frontend Dependencies** | Installs npm dependencies reproducibly from `package.json` and `package-lock.json`. | `frontend/node_modules/` |
-| **6** | **Frontend Tests** | Runs 14 Vitest dashboard component tests. Generates JUnit XML. | `frontend/reports/frontend-junit.xml` |
+| **6** | **Frontend Tests** | Runs 19 Vitest dashboard component tests across 5 test suites. Generates JUnit XML. | `frontend/reports/frontend-junit.xml` |
 | **7** | **Frontend Build** | Compiles TypeScript and builds production distribution assets (`tsc -b && vite build`). | `frontend/dist/` bundle |
 | **8** | **Compose Config Validation** | Dry-run validates both `default` and `--profile s3` Compose configurations. | Compose schema verification |
 | **9** | **Container Image Build** | Builds `cloud-backup-backend:ci` and `cloud-backup-frontend:ci` via Docker. | Local Docker images |
@@ -134,13 +134,16 @@ Scroll down to the **Pipeline** section:
 
 ## 6. Interpreting Test Reports & Archived Artifacts
 
-### Test Result Trends
+### Test Result Trends & Historical Baselines
 After a successful build:
 - The job overview page renders a **Test Result Trend** graph.
-- Clicking **Test Result** displays a breakdown:
-  - **Backend Tests**: 29 passed, 2 skipped (when Floci is offline), 0 failed.
-  - **Frontend Tests**: 14 passed, 0 failed.
-  - **Total Quality Gate**: 100% passing tests.
+- Clicking **Test Result** displays the detailed breakdown:
+  - **Current Verified Suite (Phases 10 & 11)**:
+    - **Backend Pytest**: **47 passed, 0 failed** (47 passed when Floci emulator is online; 45 passed, 2 skipped when Floci is offline).
+    - **Frontend Vitest**: **19 passed, 0 failed** across 5 test suites.
+  - **Historical Baseline (Phase 5 Pipeline Scaffolding)**:
+    - Initial baseline prior to Phase 7 portable backup archives and Phase 11 live Floci verification was 29 backend tests and 14 frontend tests.
+  - **Total Quality Gate**: 100% passing tests across all active stages.
 
 ### Archived Artifacts
 Under the build summary:

@@ -21,6 +21,10 @@ name: CI - Continuous Integration (Strict ₹0 Cost)
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - '.gitignore'
   pull_request:
     branches:
       - main

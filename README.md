@@ -1,65 +1,119 @@
 # 🛡️ Cloud Backup System
 
-> **A Self-Hosted, Zero-Cost Cloud Storage & Automated Versioned Backup Platform**  
-> Designed as a college capstone project and resume showcase adhering strictly to a **₹0 budget constraint**.
+> **A Self-Hosted, Zero-Cost File Storage & Versioned Backup Automation Platform**
+>
+> Built with FastAPI, React 19, TypeScript, Tailwind CSS, SQLite 3 (WAL Mode), and an Abstract Storage Provider Layer (Local Filesystem + Floci S3-Compatible Emulator).
 
 ---
 
-## 📌 Project Overview
+## 📌 1. Project Title & Description
 
-**Cloud Backup System** is a full-stack, enterprise-grade file storage and backup automation management system. Built to simulate the core capabilities of cloud storage providers (such as AWS S3 or Google Drive), this application eliminates all hosting and cloud subscription fees by operating on local compute and storage while maintaining clean architectural separation.
+**Cloud Backup System** is an open-source, self-hosted web application engineered to demonstrate the architectural principles of versioned cloud storage (such as Amazon S3 or Google Drive) on local compute and storage infrastructure under a **strict ₹0 budget constraint**.
 
-- **Total Budget**: **₹0 (Zero)** &mdash; No paid cloud accounts, credit cards, or subscription services required.
-- **Frontend Architecture**: React 19 + Vite + TypeScript + Tailwind CSS (Light surface, navy text, emerald accents).
-- **Backend Architecture**: Python 3 + FastAPI + Uvicorn with asynchronous endpoints and OpenAPI documentation.
-- **Persistence Tier**: SQLite 3 with WAL mode for file metadata, immutable versions, audit logs, and backup snapshots.
-- **Storage Tier**: Local filesystem backing (default, ₹0 dependencies) with an object-oriented `StorageProvider` abstraction layer plus optional S3-compatible object store driver for **Floci** local AWS emulator (or LocalStack/SeaweedFS).
-- **Testing**: `pytest` for backend API, unit, E2E smoke, archive recovery, and Floci integration tests (45 passed, 2 skipped when Floci offline); `vitest` for frontend component verification (19 passed across 5 test suites).
-- **Portable Backup Archives (Phase 7)**: Independently restorable standard ZIP archives with root `manifest.json` (v1.0.0), binary payloads, SHA-256 integrity verification, and safe conflict strategies.
-- **DevOps & CI/CD**: Cloud-native GitHub Actions CI workflow ([.github/workflows/ci.yml](file:///c:/antigravity_projects/cloud_backup_system/.github/workflows/ci.yml)) enforcing automated zero-cost quality gates on standard GitHub-hosted runners; local declarative Jenkins pipeline ([Jenkinsfile](file:///c:/antigravity_projects/cloud_backup_system/Jenkinsfile)) preserved as a self-hosted alternative; Docker Compose orchestration.
+The application provides multi-version file storage, atomic version rollbacks, cryptographic SHA-256 integrity verification, point-in-time relational metadata snapshots, and standardized portable backup archives (`.zip` format v1.0.0) with zero external subscription dependencies.
+
+> [!NOTE]
+> **Deployment & Demonstration Scope**: This project is designed and evaluated strictly as a **single-user local demonstration system** running on a workstation or developer machine. It is **not** hosted on public cloud infrastructure, does **not** connect to real AWS cloud services, and does not provide multi-tenant authentication.
 
 ---
 
-## 🔍 Floci Local AWS Emulator & Zero-Cost Compliance Check
+## 🎯 2. Project Overview & Objectives
 
-| Topic | Analysis & Compliance Status |
-| :--- | :--- |
-| **Floci Local Emulator** | Licensed under the permissive **MIT License**. Free of charge (₹0), fully open-source local AWS emulator (`floci/floci:2.3.0`) running locally on port **4566**. Unlike proprietary or tiered tools, it requires no credit card, no token activation, and no paid feature tiers. |
-| **Persistence Engine** | Configured with `FLOCI_STORAGE_MODE=persistent` and `FLOCI_STORAGE_PERSISTENT_PATH=/app/data`. Writes synchronously to disk in the named Docker volume `cloud_backup_floci_data` so data persists across container restarts. |
-| **Python SDK (`boto3`)** | Uses `boto3` licensed under **Apache License 2.0** (permissive, zero-cost, maintained by AWS). Communicates via standard S3 protocol using path-style addressing and local dummy credentials (`test` / `test`). |
-| **Default Guarantee** | **All core features operate out of the box with `STORAGE_PROVIDER=local` requiring zero external services or Docker containers.** Floci is strictly an optional local enhancement. |
-| **Architectural Scope** | **Floci is a local developer emulator.** It runs on the local host machine and does NOT provide remote cloud deployment, geographical replication, or off-site disaster recovery. |
+### Academic & Capstone Context
+Designed as a software engineering college capstone project and DevOps portfolio showcase, this platform demonstrates:
+- Clean architectural separation between client presentation, API gateway, business domain services, and storage abstractions.
+- Immutable file versioning where uploading a modified file with an existing filename automatically increments version history without destroying previous versions.
+- Cryptographic integrity guarantees using SHA-256 hashing across all uploads, downloads, snapshots, and archive extractions.
+- Reliable, reproducible quality gates via both cloud-native GitHub Actions CI and self-hosted Declarative Jenkins pipelines.
+
+### Zero-Cost Compliance Mandate
+- **Total Budget**: **₹0 (Zero)** &mdash; No paid cloud accounts, paid API keys, credit cards, or SaaS subscriptions.
+- **Compute & Persistence**: Runs 100% on local machine resources (Python 3.12+, Node.js 20+, SQLite 3 WAL mode).
+- **Object Storage Emulation**: Uses **Floci** (`floci/floci:2.3.0`, MIT License, ₹0 cost), an open-source local AWS emulator running on port 4566, configured with synchronous disk persistence via Docker named volumes.
 
 ---
 
-## 📐 System Architecture
+## ✨ 3. Features
 
-The project is structured as a decoupled monorepo with an abstract storage provider layer:
+- **Multi-Version File Lifecycle**:
+  - Drag-and-drop or single-click file uploads with pre-upload size validation (<50 MB) and Windows reserved device name filters.
+  - Automatic version incrementing (`v1`, `v2`, etc.) with user-supplied change summary notes.
+  - Deduplicated, content-addressed, or safely namespaced immutable storage keys.
+- **Instantaneous Version Rollback**:
+  - Slide-over timeline drawer displaying complete historical version lineage, sizes, and timestamps.
+  - On-demand download of current or any historical version.
+  - Atomic one-click restore that updates the active version pointer while preserving full historical lineage.
+- **Point-in-Time System Snapshots**:
+  - Manual creation of immutable system-wide metadata snapshots.
+  - Cryptographic manifest verification using deterministic aggregate SHA-256 checksums.
+  - Chronological audit log trail tracking total files, sizes, and point-in-time status.
+- **Portable Backup Archives (.zip Format v1.0.0)**:
+  - Export all active files and historical versions into a self-contained, standard ZIP archive with a root `manifest.json`.
+  - Dry-run archive verification validating uncompressed byte counts, zip-bomb safety limits, and SHA-256 hashes without modifying state.
+  - Independent restoration into clean target installations with configurable collision strategies (`rename` [default], `skip`, `replace`).
+- **Real-Time Storage Monitoring**:
+  - Visual quota progress bar (default 50 MB local quota).
+  - Tracked files and version counters.
+  - Active storage driver badge (`local` vs. `s3`).
+- **Resilience & Graceful Degradation**:
+  - Live backend heartbeat indicator with automatic reconnect status banner.
+  - Fail-fast error propagation ensuring storage unavailability never silently corrupts data.
+
+---
+
+## 🛠️ 4. Technology Stack
+
+| Layer | Technology | Version | Purpose & Licensing |
+| :--- | :--- | :--- | :--- |
+| **Frontend UI** | React | 19.0.0 | Component hierarchy, state management (MIT) |
+| **Build Tool** | Vite | 6.4.5 | Fast ESM bundling and reverse proxy development server (MIT) |
+| **Language (Web)** | TypeScript | 5.7.2 | Type-safe interfaces matching backend Pydantic schemas (Apache 2.0) |
+| **Styling** | Tailwind CSS | 3.4.17 | Utility-first responsive design tokens (navy, light slate, emerald) |
+| **Icons** | Lucide React | 0.475.0 | Accessible UI icons (ISC) |
+| **Backend Framework** | FastAPI | 0.141.1 | High-performance asynchronous Python web framework (MIT) |
+| **ASGI Server** | Uvicorn | 0.54.0 | Asynchronous HTTP server implementation (BSD-3-Clause) |
+| **Data Validation** | Pydantic | 2.13.5 | Strict schema validation and settings management (MIT) |
+| **Database** | SQLite 3 | Built-in | Embedded relational persistence with WAL mode and foreign keys (Public Domain) |
+| **Storage (Primary)** | Local Filesystem | Standard Library | Zero-dependency atomic file operations with path-traversal guards |
+| **Storage (Optional S3)** | Floci / `boto3` | 2.3.0 / 1.43+ | Local open-source S3 emulator (MIT) + Python AWS SDK (Apache 2.0) |
+| **Containerization** | Docker Compose | 2.38+ | Multi-container local orchestration with persistent named volumes |
+| **Backend Testing** | pytest | 9.1.1 | Unit, integration, E2E smoke, and archive recovery tests (MIT) |
+| **Frontend Testing** | Vitest | 3.2.7 | React component testing with JSDOM and Testing Library (MIT) |
+| **CI / CD (Cloud-Native)**| GitHub Actions | v4 Actions | Zero-cost automated quality gates on standard GitHub-hosted runners |
+| **CI / CD (Self-Hosted)** | Declarative Jenkins | Jenkinsfile | Local cross-platform declarative CI pipeline skeleton |
+
+---
+
+## 📐 5. Architecture Diagram
+
+The system operates as a decoupled monorepo structured into four distinct architectural tiers:
 
 ```mermaid
 graph TB
     subgraph Client_Tier["Client Presentation Tier (Browser)"]
         UI["React 19 + Vite + TypeScript"]
-        Tailwind["Tailwind CSS System<br/>(Light Background, Dark Navy Text, Green Accents)"]
-        Dashboard["Dashboard Views:<br/>Upload Area | File Listing | Storage Stats | Backup History"]
+        Tailwind["Tailwind CSS System<br/>(Light Surface, Navy Text, Emerald Accents)"]
+        Dashboard["Dashboard Modules:<br/>Upload Area | File Inventory | Storage Stats | Version Drawer | Snapshots | Archives"]
         UI --> Tailwind
         UI --> Dashboard
     end
 
     subgraph API_Gateway["Communication & Network Tier"]
         HTTP_Client["Fetch / Axios API Client"]
-        CORS["CORS Middleware (Port 5173 &rarr; Port 8000)"]
+        Proxy["Vite Dev Server Proxy (Port 5173 &rarr; Port 8000)"]
+        CORS["FastAPI CORS Middleware"]
         REST["RESTful Endpoints (/api/v1)"]
         Dashboard --> HTTP_Client
-        HTTP_Client -->|HTTP/JSON & Multipart| CORS
+        HTTP_Client --> Proxy
+        Proxy -->|HTTP/JSON & Multipart| CORS
         CORS --> REST
     end
 
     subgraph Backend_Tier["Backend Application Tier (FastAPI)"]
         App["FastAPI Engine"]
-        Routers["Routers (/files, /storage, /backups, /health)"]
-        Services["Domain Services:<br/>FileService | BackupService | StatsService"]
-        Security["Validation, Exception Filter & Sanitization"]
+        Routers["Routers (/files, /storage, /backups, /archives, /health)"]
+        Services["Domain Services:<br/>FileService | BackupService | ArchiveService | StatsService"]
+        Security["Validation, Sanitization & Exception Filter"]
         
         REST --> App
         App --> Routers
@@ -73,17 +127,17 @@ graph TB
         
         Storage_ABC["StorageProvider (Abstract Base Class)"]
         Local_Driver["LocalFileSystemStorage Driver<br/>(Default: ./data/storage)"]
-        S3_Driver["S3CompatibleStorage Driver<br/>(Optional: Local MinIO / S3)"]
+        S3_Driver["S3CompatibleStorage Driver<br/>(Optional: Floci S3 on port 4566)"]
         
         FS_Storage[("Local Disk Directory")]
-        S3_Storage[("Local S3 Bucket")]
+        S3_Storage[("Floci Persistent S3 Bucket<br/>s3://cloud-backup-system")]
         
         Services --> DB_Interface
         DB_Interface --> SQLite_File
         
         Services --> Storage_ABC
         Storage_ABC -->|Active Default| Local_Driver
-        Storage_ABC -.->|Optional| S3_Driver
+        Storage_ABC -.->|Optional Config| S3_Driver
         Local_Driver --> FS_Storage
         S3_Driver -.-> S3_Storage
     end
@@ -95,230 +149,187 @@ graph TB
 
 ---
 
-## 🗂️ Monorepo Structure
+## 📸 6. Application Screenshots
+
+The dashboard is designed for desktop and tablet screens with an uncluttered interface, dark navy typography, and emerald accents.
+
+```text
++------------------------------------------------------------------------------------------------------+
+|  🛡️ Cloud Backup System       [Self-Hosted]  [Backup & Recovery Active]       ● Backend Connected    |
++------------------------------------------------------------------------------------------------------+
+|  +---------------------------+  +---------------------------+  +----------------------------------+  |
+|  | STORAGE USAGE             |  | TRACKED FILES             |  | ACTIVE STORAGE BACKEND           |  |
+|  | 2.45 MB / 50.00 MB  (5%)  |  | 3 Files (5 Versions)      |  | Local Disk (./data/storage)      |  |
+|  | [|||||                  ] |  | Last Backup: 2 mins ago   |  | Quota Status: Healthy            |  |
+|  +---------------------------+  +---------------------------+  +----------------------------------+  |
+|                                                                                                      |
+|  +------------------------------------------------------------------------------------------------+  |
+|  |  UPLOAD FILE (DRAG & DROP OR BROWSE)                                                           |  |
+|  |  [ Drop file here (max 50 MB) ]  Change Summary: [ Updated architecture benchmarks           ]  |  |
+|  +------------------------------------------------------------------------------------------------+  |
+|                                                                                                      |
+|  [ File Inventory ]   [ Backup Snapshots ]   [ Portable Archives (.zip) ]                            |
+|  +------------------------------------------------------------------------------------------------+  |
+|  | Filename            Current Version   Size       SHA-256 Fingerprint     Actions               |  |
+|  |------------------------------------------------------------------------------------------------|  |
+|  | project_spec.md     v2 (Latest)       14.2 KB    35a0e0f0b4e09ca7...     [Download] [Versions] |  |
+|  | architecture.pdf    v1 (Initial)      2.41 MB    f634e9a4aa725537...     [Download] [Versions] |  |
+|  +------------------------------------------------------------------------------------------------+  |
++------------------------------------------------------------------------------------------------------+
+```
+
+*(To add live graphical screenshots to your GitHub fork, capture PNG images from `http://localhost:5173` and place them under `docs/screenshots/` referencing `![Dashboard Overview](docs/screenshots/dashboard.png)`).*
+
+---
+
+## 🗂️ 7. Project Directory Structure
 
 ```text
 cloud_backup_system/
-├── .env.example              # Master environment configuration template
-├── .gitignore                # Multi-language Git ignore rules (preserves Jenkinsfile)
-├── Jenkinsfile               # Declarative Jenkins CI/CD pipeline skeleton (₹0 local runners)
-├── README.md                 # Primary project documentation
-├── docs/                     # System design and specifications
-│   ├── api_specification.md  # Implemented REST API contracts
-│   ├── architecture.md       # Architecture deep-dive, MinIO check, and ER diagram
-│   ├── jenkins-ci-cd.md      # Jenkins CI/CD pipeline architecture and setup guide
-│   └── phase_plan.md         # 6-phase milestone development roadmap
-├── scripts/                  # Automated Windows PowerShell workflows
-│   ├── start-local.ps1       # Local development environment launcher
-│   └── smoke-test.ps1        # 10-step end-to-end API smoke verification
-├── backend/                  # Python 3 + FastAPI Application
-│   ├── .env.example          # Backend environment variables template
-│   ├── requirements.txt      # Free and maintained Python dependencies
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # Cloud-native zero-cost GitHub Actions workflow
+├── .env.example                   # Master environment configuration template
+├── .gitignore                     # Multi-language Git ignore rules (targeted archive patterns)
+├── Jenkinsfile                    # Cross-platform Declarative Jenkins CI/CD pipeline
+├── README.md                      # Comprehensive project documentation
+├── docker-compose.yml             # Docker Compose orchestration (Local + Floci S3 profile)
+├── docs/                          # Architecture, API specs, CI/CD guides, and phase plans
+│   ├── api_specification.md       # Implemented REST API contracts & JSON schemas
+│   ├── architecture.md            # Deep-dive architecture, ER diagram, and Floci analysis
+│   ├── github-actions-ci.md       # GitHub Actions CI operational & billing guide
+│   ├── jenkins-ci-cd.md           # Self-hosted Jenkins CI architecture & troubleshooting
+│   └── phase_plan.md              # Phased milestone roadmap (Phases 1–13)
+├── scripts/                       # Automated PowerShell and Python verification scripts
+│   ├── smoke-test.ps1             # 10-step end-to-end API smoke test workflow
+│   ├── start-local.ps1            # Local development launcher for Windows
+│   └── verify-archive-recovery.py # Phase 8 isolated disaster recovery audit script
+├── backend/                       # Python 3 + FastAPI Application
+│   ├── .env.example               # Backend environment variables template
+│   ├── requirements.txt           # Pinned Python open-source dependencies
 │   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py           # FastAPI entry point, lifespan, CORS, and exception filter
-│   │   ├── core/             # Configuration and environment loaders
-│   │   │   ├── __init__.py
-│   │   │   └── config.py
-│   │   ├── db/               # SQLite database manager & relational schemas
-│   │   │   ├── __init__.py
-│   │   │   └── database.py
-│   │   ├── models/           # Pydantic validation and response schemas
-│   │   │   ├── __init__.py
-│   │   │   └── schemas.py
-│   │   ├── routers/          # API route definitions
-│   │   │   ├── __init__.py
-│   │   │   ├── health.py     # System health and diagnostics
-│   │   │   ├── files.py      # Upload, download, list, versions, restore, delete
-│   │   │   ├── storage.py    # Capacity metrics and quota stats
-│   │   │   └── backups.py    # Backup snapshot trigger and audit history
-│   │   ├── services/         # Domain business logic
-│   │   │   ├── __init__.py
-│   │   │   ├── file_service.py
-│   │   │   ├── backup_service.py
-│   │   │   └── stats_service.py
-│   │   └── storage/          # Storage abstraction drivers
-│   │       ├── __init__.py
-│   │       ├── base.py       # StorageProvider Abstract Base Class (ABC)
-│   │       ├── local.py      # LocalFileSystemStorage driver (atomic, secure)
-│   │       └── s3.py         # S3CompatibleStorage driver (MinIO/S3 via boto3)
-│   ├── tests/                # Pytest test suite (25 tests passing)
-│   │   ├── __init__.py
-│   │   ├── conftest.py       # Isolated SQLite & storage fixtures
-│   │   ├── test_health.py
-│   │   ├── test_storage_interface.py
-│   │   ├── test_storage_local.py
-│   │   ├── test_storage_s3.py
-│   │   ├── test_file_operations.py
-│   │   ├── test_security_and_validation.py
-│   │   └── test_backups.py
-│   └── data/                 # Ignored local persistence directories
-│       ├── .gitkeep
-│       └── storage/
-│           └── .gitkeep
-├── frontend/                 # React 19 + Vite + TypeScript + Tailwind CSS
-│   ├── .env.example          # Frontend environment variables
-│   ├── index.html            # Semantic HTML entry with Inter font
-│   ├── package.json          # Node dependencies and build scripts
-│   ├── src/                  # React dashboard UI
-│   └── tests/                # Frontend Vitest test suite
-└── docker/                   # Docker and Compose configurations (Phase 5)
-    └── .gitkeep
+│   │   ├── main.py                # FastAPI entry point, lifespan, CORS, and exception filter
+│   │   ├── core/config.py         # Pydantic Settings configuration loader
+│   │   ├── db/database.py         # SQLite connection manager, schemas, WAL mode
+│   │   ├── models/schemas.py      # Pydantic request & response schemas
+│   │   ├── routers/               # Versioned REST routers (/health, /files, /storage, etc.)
+│   │   ├── services/              # Domain logic (FileService, BackupService, ArchiveService)
+│   │   └── storage/               # Storage abstraction layer (LocalFileSystem & Floci S3)
+│   ├── data/                      # Local persistence directory (cloud_backup.db & files/)
+│   └── tests/                     # 47 automated Pytest unit and integration tests
+├── frontend/                      # React 19 + Vite + TypeScript + Tailwind CSS
+│   ├── .env.example               # Frontend environment variables template
+│   ├── package.json               # Node dependencies and build scripts
+│   ├── vite.config.ts             # Vite configuration with /api reverse proxy
+│   ├── src/                       # React components, API client, and application root
+│   └── tests/                     # 19 Vitest component tests across 5 test suites
+└── docker/                        # Production Dockerfiles and container configurations
+    ├── Dockerfile.backend         # Multi-stage Python 3.12 slim container
+    ├── Dockerfile.frontend        # Multi-stage Node 20 alpine + Nginx reverse proxy
+    └── nginx.conf                 # Nginx reverse proxy routing /api/ to backend
 ```
 
 ---
 
-## 🚀 Running the Backend (Windows PowerShell)
+## 📋 8. Prerequisites
 
-### 1. Configure Environment
+Ensure the following runtimes and tools are installed on your Windows machine:
+
+| Tool | Recommended Version | Verification Command | Required For |
+| :--- | :--- | :--- | :--- |
+| **Python** | 3.10 to 3.14 (3.12+ recommended) | `python --version` | FastAPI Backend & Pytest |
+| **Node.js** | 20 LTS or higher | `node --version` | React Dashboard UI |
+| **npm** | 10 or 11 | `npm.cmd --version` | Frontend Dependencies & Vitest |
+| **Git** | 2.40+ | `git --version` | Version Control |
+| **Docker Desktop** | 24+ (Optional) | `docker --version` | Floci Local S3 Emulator Mode |
+
+---
+
+## 💻 9. Windows Installation & Setup Instructions
+
+Open a standard Windows PowerShell terminal:
+
 ```powershell
-# Navigate to backend directory
-cd c:\antigravity_projects\cloud_backup_system\backend
+# 1. Navigate to your projects directory and open the workspace
+cd C:\antigravity_projects\cloud_backup_system
 
-# Create your local .env file from the template
+# 2. Configure environment files from templates
 Copy-Item .env.example .env
+Copy-Item backend\.env.example backend\.env
+Copy-Item frontend\.env.example frontend\.env
+
+# 3. Install Backend Python Dependencies
+cd backend
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+cd ..
+
+# 4. Install Frontend Node Dependencies
+cd frontend
+npm.cmd ci
+cd ..
 ```
 
-### 2. Run All Automated Tests
-```powershell
-# Execute the full pytest test suite
-python -m pytest tests/ -v
-```
-*Output: 25 passed, 1 skipped (live MinIO skipped when offline), 0 failed.*
+---
 
-### 3. Start the Backend API Server
+## 🚀 10. Backend Startup Instructions
+
+In your first PowerShell terminal, launch the FastAPI server:
+
 ```powershell
-# Launch development server on port 8000
+cd C:\antigravity_projects\cloud_backup_system\backend
+
+# Launch ASGI server on port 8000
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 4. Inspect Live API Documentation
-Once running, open your web browser to:
-- **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **API Base URL**: `http://127.0.0.1:8000`
+- **Interactive Swagger Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **ReDoc Documentation**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 - **Health Check Endpoint**: [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
-- **Storage Metrics Endpoint**: [http://127.0.0.1:8000/api/v1/storage/stats](http://127.0.0.1:8000/api/v1/storage/stats)
 
 ---
 
-## 💻 Running the Frontend Dashboard (Windows PowerShell)
+## 🖥️ 11. Frontend Startup Instructions
 
-In a separate PowerShell terminal:
+In a second PowerShell terminal, start the Vite development server:
 
-### 1. Configure Environment
 ```powershell
-# Navigate to frontend directory
-cd c:\antigravity_projects\cloud_backup_system\frontend
+cd C:\antigravity_projects\cloud_backup_system\frontend
 
-# Ensure local .env exists (default proxies to /api/v1 on backend)
-Copy-Item .env.example .env
-```
-
-### 2. Run Frontend Automated Tests
-```powershell
-# Run Vitest component & unit tests
-npm.cmd test
-```
-*Output: 4 test suites passed (14 tests passed), 0 failed.*
-
-### 3. Build Production Bundle
-```powershell
-# Validate TypeScript types and compile Vite production assets
-npm.cmd run build
-```
-
-### 4. Start the Frontend Development Server
-```powershell
-# Launch Vite dev server on port 5173
+# Launch Vite development server on port 5173
 npm.cmd run dev
 ```
 
-Open your browser to [http://localhost:5173](http://localhost:5173). The Vite reverse proxy forwards all `/api/*` calls directly to `http://127.0.0.1:8000` with zero CORS issues.
+- **Web Dashboard**: [http://localhost:5173](http://localhost:5173)
+- The Vite development server automatically reverse-proxies all `/api/*` network requests directly to `http://127.0.0.1:8000` with zero Cross-Origin Resource Sharing (CORS) friction.
 
 ---
 
-## 🖥️ Dashboard Capabilities (Phase 3 Implemented)
+## 🐳 12. Docker & Floci S3 Emulator Setup
 
-- **Storage Metrics Card**: Live visual quota bar (default 50 MB), tracked files counter, active storage engine driver badge (`local` / `s3`), and point-in-time timestamp.
-- **Drag-and-Drop Uploader**: Visual drop target, version notes field, pre-upload file size verification (<50 MB), reserved Windows device names filter, and real-time upload status.
-- **File Inventory**: Substring search filter, pagination, semantic mime-type icons, active version badge (`v1`, `v2`, etc.), copyable SHA-256 fingerprint, single-click download, and confirmation-guarded deletion.
-- **Version Drawer**: Slide-over timeline of historical versions with release notes, creation timestamps, version download action, and one-click rollback/restore with confirmation dialog.
-- **System Snapshots**: Manual trigger for system-wide manifest snapshots and point-in-time snapshot audit trail.
-- **Graceful Error Recovery**: Live backend heartbeat indicator with automatic reconnect banner and fallback states when the backend is offline.
+### What is Floci?
+**Floci** (`floci/floci:2.3.0`) is a free, MIT-licensed local AWS emulator running locally on port **4566**. It simulates Amazon S3 APIs, allowing the backend to be evaluated against the S3 object store protocol without real AWS credentials, cloud accounts, or billing risks.
 
----
+> [!WARNING]
+> **Local Emulator Disclaimer**: Floci is an emulator running locally on your workstation. It does **not** connect to real Amazon Web Services and does **not** provide off-site disaster recovery or geographical redundancy. All core application features function out of the box using default local filesystem storage without Docker.
 
-## 🛠️ Execution Modes & Windows PowerShell Run Guide
+### Running Floci via Docker Compose
 
-### Mode A: Local Filesystem Mode (Default, Zero-Dependency, ₹0 Budget)
-
-No Docker or external services required. Everything runs locally on disk.
-
-#### 1. Install Backend Dependencies
 ```powershell
-# Navigate to backend directory
-cd c:\antigravity_projects\cloud_backup_system\backend
-
-# Install python dependencies (FastAPI, uvicorn, pydantic, boto3, pytest)
-pip install -r requirements.txt
-```
-
-#### 2. Start Backend API Server
-```powershell
-# In Terminal 1:
-cd c:\antigravity_projects\cloud_backup_system\backend
-$env:STORAGE_PROVIDER="local"
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-- Health Check: [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
-- Interactive Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-#### 3. Start Frontend Dashboard
-```powershell
-# In Terminal 2:
-cd c:\antigravity_projects\cloud_backup_system\frontend
-npm.cmd run dev
-```
-- Web Dashboard: [http://localhost:5173](http://localhost:5173)
-
-#### 4. Run Automated Unit & Integration Tests
-```powershell
-# Run backend test suite (isolated SQLite and mocked storage)
-cd c:\antigravity_projects\cloud_backup_system
-python -m pytest backend/tests -v
-
-# Run frontend test suite and verify production build
-cd c:\antigravity_projects\cloud_backup_system\frontend
-npm.cmd test
-npm.cmd run build
-```
-
----
-
-### Mode B: Floci Mode (Local AWS/S3-Compatible Storage Emulator)
-
-Uses the free, open-source Floci emulator (`floci/floci:2.3.0`, MIT License, ₹0 budget) running locally on port **4566**.
-
-#### 1. Verify Docker is Running
-```powershell
-docker --version
-docker ps
-```
-
-#### 2. Start Floci Service with Persistent Storage
-```powershell
-# Start Floci via Docker Compose with dedicated persistent volume
-cd c:\antigravity_projects\cloud_backup_system
+# 1. Start Floci container with dedicated persistent named volume
+cd C:\antigravity_projects\cloud_backup_system
 docker compose --profile s3 up -d floci
 
-# Verify Floci health endpoint
-Invoke-RestMethod -Uri "http://localhost:4566/_floci/health"
+# 2. Verify Floci health endpoint
+Invoke-RestMethod -Uri "http://127.0.0.1:4566/_floci/health"
 ```
 
-#### 3. Start Backend with S3 Storage Selected
+### Running Backend in Floci Mode
+In your backend PowerShell terminal, set the storage provider to `s3`:
+
 ```powershell
-# In Terminal 1:
-cd c:\antigravity_projects\cloud_backup_system\backend
+cd C:\antigravity_projects\cloud_backup_system\backend
 $env:STORAGE_PROVIDER="s3"
 $env:S3_ENDPOINT_URL="http://127.0.0.1:4566"
 $env:S3_ACCESS_KEY="test"
@@ -326,405 +337,185 @@ $env:S3_SECRET_KEY="test"
 $env:S3_BUCKET_NAME="cloud-backup-system"
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-*(The backend's `S3CompatibleStorage` driver automatically and idempotently ensures the bucket `cloud-backup-system` exists).*
 
-#### 4. Start Frontend
+### Safely Stopping Floci (Preserves Data)
 ```powershell
-# In Terminal 2:
-cd c:\antigravity_projects\cloud_backup_system\frontend
-npm.cmd run dev
-```
+# Stop container without destroying persistent volume
+docker compose stop floci
 
-#### 5. Verify Full Lifecycle (Upload, Versioning, Download, Restore, Snapshot)
-You can perform these actions in the browser UI at [http://localhost:5173](http://localhost:5173) or via PowerShell:
-```powershell
-# 1. Upload initial file (Version 1)
-$form = @{ file = Get-Item "README.md" }
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/files/upload" -Method Post -Form $form
-
-# 2. Upload updated file with same filename (Creates Version 2)
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/files/upload" -Method Post -Form $form
-
-# 3. Create a point-in-time system backup snapshot
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/backups/trigger?notes=Verification+Snapshot" -Method Post
-
-# 4. View storage statistics reflecting S3/Floci
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/storage/stats"
-```
-
-#### 6. Test Data Persistence Across Emulator Restart
-```powershell
-# Restart Floci container
-docker restart cloud_backup_floci
-
-# Verify stored objects still exist in Floci after restart (returns 200 with metadata)
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/storage/stats"
-```
-
-#### 7. Stop Containers Without Deleting Persistent Volumes
-```powershell
-# Stop containers (preserves cloud_backup_floci_data and cloud_backup_backend_data volumes)
-docker compose stop
-
-# Do NOT run 'docker compose down -v' unless you explicitly want to purge all stored data!
+# Do NOT use 'docker compose down -v' unless you explicitly intend to wipe stored data!
 ```
 
 ---
 
-### Mode C: Full Multi-Container Docker Compose Stack
+## 📡 13. REST API Documentation & Contracts
 
-Run the entire platform (Frontend + Backend + Floci) inside Docker:
+All endpoints are versioned under `/api/v1`. Interactive exploration is available via Swagger at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
-```powershell
-cd c:\antigravity_projects\cloud_backup_system
-
-# Validate compose configuration
-docker compose --profile s3 config
-
-# Build and start all three containers locally
-docker compose --profile s3 up -d --build
-
-# View running container status
-docker compose ps
-
-# Access application
-# - Web Dashboard:  http://localhost:5173
-# - REST API Docs:  http://localhost:8000/docs
-# - Floci S3 Edge:  http://localhost:4566/_floci/health
-
-# Stop without destroying data
-docker compose stop
-```
+| HTTP Method | Endpoint | Description | Status Code |
+| :--- | :--- | :--- | :---: |
+| `GET` | `/` | Root API welcome message and route sitemap | `200 OK` |
+| `GET` | `/api/v1/health` | System liveness, database status, and active storage engine | `200 OK` |
+| `POST` | `/api/v1/files/upload` | Upload file (`multipart/form-data`) & increment version | `201 Created` |
+| `GET` | `/api/v1/files` | List active files with pagination and search filter | `200 OK` |
+| `GET` | `/api/v1/files/{file_id}` | Retrieve metadata for a specific file | `200 OK` |
+| `GET` | `/api/v1/files/{file_id}/download` | Download current or historical version (`?version_id=...`) | `200 OK` |
+| `GET` | `/api/v1/files/{file_id}/versions` | Retrieve complete version history lineage | `200 OK` |
+| `POST` | `/api/v1/files/{file_id}/restore/{version_id}` | Atomically restore active pointer to a historical version | `200 OK` |
+| `DELETE`| `/api/v1/files/{file_id}` | Soft-delete file and exclude from catalog listings | `200 OK` |
+| `GET` | `/api/v1/storage/stats` | Storage metrics, quota usage, and masked directory path | `200 OK` |
+| `POST` | `/api/v1/backups/trigger` | Create immutable point-in-time relational metadata snapshot | `201 Created` |
+| `GET` | `/api/v1/backups/history` | Chronological audit log of all generated snapshots | `200 OK` |
+| `GET/POST` | `/api/v1/archives/export` | Export self-contained portable backup archive (`.zip`) | `200 OK` |
+| `POST` | `/api/v1/archives/verify` | Dry-run integrity, zip-bomb, and SHA-256 verification | `200 OK` |
+| `POST` | `/api/v1/archives/restore` | Restore files and versions from archive (`rename`/`skip`/`replace`) | `200 OK` |
 
 ---
 
-## 🧪 End-to-End Smoke Test & Verification Workflows
+## 🧪 14. Automated Testing Commands & Verified Results
 
-The Cloud Backup System includes two automated, reproducible verification workflows covering all 10 core lifecycle operations:
+The platform enforces 100% test passing gates across backend, frontend, and isolated disaster recovery workflows.
 
-1. **System Health & Dependency Check** &mdash; Validates SQLite connection and active storage driver.
-2. **Initial File Upload (v1)** &mdash; Computes SHA-256, assigns immutable key, and registers version 1.
-3. **Catalog Listing & Lookup** &mdash; Verifies file indexing and substring search.
-4. **File Download & Content Verification** &mdash; Validates downloaded bytes match original SHA-256.
-5. **Second Version Upload (v2)** &mdash; Increments version number while preserving immutable past version.
-6. **Historical Version Download** &mdash; Retrieves v1 by `version_id` query parameter.
-7. **Version Rollback / Restore** &mdash; Atomically rolls back active pointer to v1.
-8. **Point-in-Time Backup Snapshot** &mdash; Computes deterministic manifest checksum and records in audit history.
-9. **File Deletion & Storage Purge** &mdash; Purges metadata and removes physical blobs from storage.
-10. **Graceful Storage Failure Handling** &mdash; Confirms clean 500 error when storage backend is unavailable, preventing silent local disk fallback.
-
-### Option 1: Automated Pytest E2E Suite (Zero Running Services Required)
-Runs against an isolated in-memory/temporary SQLite database and storage directory:
+### 1. Backend Pytest Suite
 ```powershell
-python -m pytest backend/tests/test_smoke_e2e.py -v
+cd C:\antigravity_projects\cloud_backup_system
+python -m pytest backend/tests -v
 ```
+- **Verified Result (Floci Online)**: **47 passed, 0 failed (100% passing)** in ~18 seconds.
+- **Verified Result (Floci Offline)**: **45 passed, 2 skipped, 0 failed** in ~19 seconds. (The two live Floci tests skip gracefully when the local emulator is offline).
 
-### Option 2: Live PowerShell Smoke Test (Runs Against Live API)
-With the backend running locally (`http://127.0.0.1:8000`):
+### 2. Frontend Vitest Suite
 ```powershell
-.\scripts\smoke-test.ps1
+cd C:\antigravity_projects\cloud_backup_system\frontend
+npm.cmd test
 ```
-*(Uses temporary UUID-tagged files and cleans up automatically without modifying existing user files or SQLite databases).*
+- **Verified Result**: **19 passed across 5 test suites (100% passing)** in ~12 seconds.
+
+### 3. Frontend Production Build Check
+```powershell
+cd C:\antigravity_projects\cloud_backup_system\frontend
+npm.cmd run build
+```
+- **Verified Result**: Zero TypeScript errors. Compiles production assets to `dist/index.html` in ~4.4 seconds.
+
+### 4. Native PowerShell E2E Smoke Test
+With the backend running on `http://127.0.0.1:8000`:
+```powershell
+cd C:\antigravity_projects\cloud_backup_system
+powershell.exe -ExecutionPolicy Bypass -File scripts\smoke-test.ps1
+```
+- **Verified Result**: **10/10 lifecycle operations PASSED** in ~0.5 seconds using temporary UUID-tagged test files.
+
+### 5. Genuine Isolated Disaster Recovery Audit
+```powershell
+cd C:\antigravity_projects\cloud_backup_system
+python scripts/verify-archive-recovery.py
+```
+- **Verified Result**: **All 8 disaster-recovery audit steps PASSED**. Proves that an exported archive restores into a completely fresh, air-gapped target environment with byte-for-byte fidelity and zero catalog pollution on corrupt archives.
 
 ---
 
-## 💾 Backup Semantics, Recovery Model & Limitations
+## 💾 15. Version Management & Backup Recovery Explanation
 
-To ensure complete transparency for college defense, technical review, and disaster recovery audits, the system differentiates between **Point-in-Time Metadata Snapshots** (Phase 2) and **Portable Backup Archives** (Phase 7):
+To maintain transparency during technical review, the system clearly differentiates between **Metadata Snapshots** and **Portable Backup Archives**:
 
-### 1. Metadata Snapshots vs. Portable Backup Archives
-
-| Architectural Dimension | Metadata Snapshots (Phase 2) | Portable Backup Archives (Phase 7) |
+| Dimension | Point-in-Time Metadata Snapshots (Phase 2) | Portable Backup Archives (Phase 7) |
 | :--- | :--- | :--- |
-| **Storage Medium** | SQLite `backups` & `backup_items` relational tables. | Standard `.zip` binary archive with root `manifest.json`. |
-| **Contents** | References (`file_id`, `version_id`), individual SHA-256 hashes, sizes, aggregate checksum. | Complete raw binary payloads for all active files & historical versions under `blobs/`, plus format v1.0.0 manifest. |
-| **Payload Duplication** | Zero payload duplication. Fast, zero-overhead point-in-time state capture. | Self-contained. Copies required versions from storage backend into ZIP. |
-| **Independence** | Dependent on existing backend storage (`./data/storage` or Floci S3) and SQLite database. | **100% Independent**. Restorable onto clean, isolated installations without the original database or file paths. |
-| **Primary Use Case** | Point-in-time state auditing, instantaneous version rollback, change tracking. | Full disaster recovery, hardware migrations, external cold storage, and offline portability. |
+| **Storage Medium** | SQLite `backups` & `backup_items` relational tables | Standard `.zip` binary archive containing `manifest.json` |
+| **Contents** | References (`file_id`, `version_id`), sizes, SHA-256 hashes, aggregate checksum | Full binary payload streams under `blobs/` for all versions + root `manifest.json` |
+| **Payload Duplication** | Zero duplication (lightweight audit pointer) | Full encapsulation (self-contained disaster recovery) |
+| **Independence** | Dependent on existing backend storage and database | **100% Independent** (restores into empty installations) |
+| **Primary Use Case** | State auditing, fast version history tracking | Cold storage, hardware migration, disaster recovery |
 
----
-
-### 2. Portable Backup Archive Format Specification (v1.0.0)
-
-A portable backup archive is an unencrypted, standardized ZIP archive generated using Python's standard library (`zipfile`, `hashlib`, `json`). It adheres strictly to format version `1.0.0`:
-
+### Portable Archive Specification (v1.0.0)
 ```text
-backup_archive_20261024_030000.zip
+cloud_backup_archive_20261110_180000.zip
 ├── manifest.json                  # Root cryptographic manifest (v1.0.0)
 └── blobs/
     ├── {version_id_1}_report.pdf  # Raw payload bytes for File 1, Version 1
     ├── {version_id_2}_report.pdf  # Raw payload bytes for File 1, Version 2
-    └── {version_id_3}_data.csv    # Raw payload bytes for File 2, Version 1
+    └── {version_id_3}_config.json # Raw payload bytes for File 2, Version 1
 ```
 
-- **Manifest Metadata**: Root `manifest.json` specifies `archive_format_version: "1.0.0"`, `generator: "CloudBackupSystem/1.0.0"`, `exported_at`, `total_files`, `total_versions`, `total_bytes`, and the files array.
-- **File & Version Relationships**: Each entry records `original_filename`, `safe_filename`, `content_type`, `current_version_number`, `total_versions`, and ordered `versions` with `archive_blob_path`, `size_bytes`, `sha256`, `change_summary`, and `is_current`.
-- **Policy on Missing Blobs**: If any underlying version blob is missing from storage, the export immediately aborts with `HTTP 409 Conflict`. **The system never outputs a truncated or incomplete backup while claiming success.**
-- **Secret Exclusion**: Archives strictly package user files and metadata. Application secrets, `.env` files, JWT tokens, SQLite database files, and operating system paths are categorically excluded.
+- **Conflict Strategies**: When restoring into an environment with existing filenames:
+  - `rename` *(Default)*: Safely appends `_imported_{short_uuid}` to colliding filenames, preserving existing data.
+  - `skip`: Skips colliding files and imports only new assets.
+  - `replace`: Atomically purges colliding existing files and historical versions, replacing them with archive contents.
+- **Fail-Safe Integrity**: If any required binary blob is missing during export, the service raises `HTTP 409 Conflict`. **The system never exports a truncated archive while claiming success.**
 
 ---
 
-### 3. Security, Defenses & Conflict Handling
+## 🔄 16. GitHub Actions & Jenkins CI/CD Pipelines
 
-- **Path Traversal Defense**: Zip entries with absolute paths, drive letters (`C:`), or directory traversals (`../`) are detected and rejected during verification.
-- **Windows Reserved Device Names**: Filenames matching `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9` are rejected.
-- **Decompression Bomb Mitigation**:
-  - Max archive upload size: **100 MB**.
-  - Max total uncompressed payload: **250 MB**.
-  - Max entry count: **1,000 entries**.
-  - Max compression ratio: **100:1**.
-- **Cryptographic Pre-Verification**: Verification and restore operations compute the SHA-256 digest of every uncompressed blob and match it against `manifest.json` before any database or storage mutations are made.
-- **Zero-Trust Identifiers**: Archive UUIDs are never trusted. During restoration, fresh internal system UUIDs and storage keys are generated.
-- **Storage Rollback**: If a database error occurs during restore, newly written storage objects are rolled back and purged to prevent disk clutter.
-- **Conflict Resolution Strategies**:
-  - `rename` *(Default)*: Safely appends `_imported_{short_uuid}` to conflicting filenames. Existing files and historical versions remain untouched.
-  - `skip`: Skips files that already exist in the target system. Only new files are imported.
-  - `replace`: Atomically removes colliding existing files and all their historical versions, replacing them with the archive's versions.
+### 1. Cloud-Native GitHub Actions CI ([.github/workflows/ci.yml](.github/workflows/ci.yml))
+The primary, turnkey automated quality assurance gate:
+- **Triggers**: Pushes and Pull Requests to `main` (with `paths-ignore` for markdown documentation), plus manual `workflow_dispatch`.
+- **Strict ₹0 Budget Safeguards**:
+  - Uses standard GitHub-hosted `ubuntu-latest` Linux runners.
+  - Least-privilege permissions: `permissions: contents: read`.
+  - Fail-fast timeouts: `timeout-minutes: 10` on all jobs.
+  - Concurrency management: automatically cancels stale runs when new commits are pushed.
+  - Zero artifact storage overhead: compiles bundles without consuming artifact storage limits.
+- **Jobs**:
+  1. `backend`: Python 3.12, pip cache, runs all 47 pytest tests.
+  2. `frontend`: Node.js 20 LTS, npm cache, `npm ci`, 19 Vitest tests, TypeScript compilation, and Vite production build.
+  3. `docker-validation`: Docker Compose syntax validation and local container build checks.
+  4. `floci-integration`: Opt-in manual trigger to spin up Floci and run live S3 integration tests.
 
----
-
-### 4. PowerShell Commands: Export, Verify & Restore
-
-All archive operations can be executed directly from Windows PowerShell using `Invoke-RestMethod` or `curl.exe`:
-
-#### Step A: Export Archive (.zip)
-```powershell
-# Export archive with audit notes to a local ZIP file
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/archives/export?notes=Monthly+Offline+Backup" `
-  -Method GET `
-  -OutFile "C:\temp\backup_archive.zip"
-
-Write-Host "Archive exported successfully to C:\temp\backup_archive.zip"
-```
-
-#### Step B: Verify Archive Integrity (Dry-Run Check)
-```powershell
-# Inspect archive structure, zip limits, and SHA-256 checksums without modifying state
-$filePath = "C:\temp\backup_archive.zip"
-$form = @{
-  file = Get-Item -Path $filePath
-}
-$verifyResult = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/archives/verify" `
-  -Method POST `
-  -Form $form
-
-# Display verification summary
-$verifyResult | Format-List valid, format_version, total_files, total_versions, total_readable, errors
-```
-
-#### Step C: Restore Archive into Live System
-```powershell
-# Restore archive with non-destructive 'rename' conflict strategy (or 'skip', 'replace')
-$filePath = "C:\temp\backup_archive.zip"
-$form = @{
-  file              = Get-Item -Path $filePath
-  conflict_strategy = "rename"
-}
-$restoreResult = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/archives/restore" `
-  -Method POST `
-  -Form $form
-
-Write-Host "Restore Message: $($restoreResult.message)"
-Write-Host "Files Imported:  $($restoreResult.imported_files_count)"
-Write-Host "Versions Added:  $($restoreResult.imported_versions_count)"
-```
+### 2. Self-Hosted Declarative Jenkins Pipeline ([Jenkinsfile](Jenkinsfile))
+Maintained as an alternative for local, air-gapped, or self-hosted CI environments:
+- 11 declarative pipeline stages with cross-platform compatibility (`bat` on Windows, `sh` on Linux).
+- Standard JUnit XML reporting for both Pytest (`backend-junit.xml`) and Vitest (`frontend-junit.xml`).
+- Safe cleanup using `docker compose stop floci` avoiding destructive volume wipes.
 
 ---
 
-### 5. Safe Recovery into an Isolated Environment (Disaster Recovery Simulation)
+## 🔒 17. Security Practices & Defenses
 
-To prove that a backup archive is 100% independently recoverable on an air-gapped or fresh system without access to the original SQLite database or storage directories:
-
-```powershell
-# 1. Create a clean, temporary recovery workspace
-$RecoveryDir = "C:\temp\isolated_recovery_test"
-New-Item -ItemType Directory -Path "$RecoveryDir\storage" -Force | Out-Null
-
-# 2. Launch an isolated FastAPI instance pointing to a fresh database and storage directory
-$env:DATABASE_PATH    = "$RecoveryDir\recovery.db"
-$env:LOCAL_STORAGE_DIR = "$RecoveryDir\storage"
-$env:STORAGE_PROVIDER  = "local"
-$env:PORT              = "8005"
-
-# (In a separate terminal, start backend on port 8005)
-# Start-Process python -ArgumentList "-m uvicorn app.main:app --port 8005"
-
-# 3. Post the archive to the fresh backend
-$form = @{
-  file              = Get-Item -Path "C:\temp\backup_archive.zip"
-  conflict_strategy = "rename"
-}
-$res = Invoke-RestMethod -Uri "http://127.0.0.1:8005/api/v1/archives/restore" -Method POST -Form $form
-
-# 4. Verify catalog on fresh system
-$files = Invoke-RestMethod -Uri "http://127.0.0.1:8005/api/v1/files" -Method GET
-Write-Host "Recovered $($files.total) files in isolated environment!"
-
-# 5. Clean up temporary recovery directory after verification
-Remove-Item -Path $RecoveryDir -Recurse -Force
-```
+1. **Path Traversal Defenses**: Rejects `..`, `/`, `\`, and Windows drive letters (`C:`) in filenames, object keys, and archive entry paths.
+2. **Windows Reserved Device Name Filter**: Blocks uploads and archive imports matching `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, and `LPT1-9`.
+3. **Decompression Bomb Protection**: Enforces strict archive safety thresholds:
+   - Max archive upload size: **100 MB**
+   - Max total uncompressed payload: **250 MB**
+   - Max entries: **1,000 files**
+   - Max compression ratio: **100:1**
+4. **Zero-Trust Archive Identifiers**: Archive UUIDs are never trusted during restore; fresh system UUIDs and storage keys are generated upon import.
+5. **Atomic Writing**: Local filesystem writes use temporary PID-tagged files atomically renamed upon completion to prevent partially written blobs.
+6. **Path Masking**: Internal operating system paths are masked in API outputs to prevent filesystem enumeration.
 
 ---
 
-### 6. Disaster Recovery Disclaimer & Limitations
+## ⚠️ 18. Known Limitations
 
-> [!IMPORTANT]
-> **Disaster Recovery Reality Check**:
-> 1. An archive is independently recoverable **only if** all required binary contents are intact and the archive passes cryptographic SHA-256 verification.
-> 2. **Local archives are NOT off-site disaster recovery.** Storing a `.zip` archive on the same physical drive or virtual machine does not protect against drive failure, filesystem corruption, or machine loss. For true disaster recovery, archive files must be replicated to separate physical media, off-site secondary storage, or cold cloud archives.
-> 3. Single-system concurrency limitations: While SQLite WAL mode provides multi-reader concurrency, archive export takes an atomic snapshot view of the database metadata at the moment of invocation. Files modified during export will be captured according to the transaction's initial state.
-
----
-
-## 🚀 Continuous Integration (CI/CD)
-
-The Cloud Backup System implements automated, zero-cost continuous integration quality gates to guarantee software reliability without requiring paid cloud infrastructure.
+1. **Single-User Local Demonstration**: Designed as an academic capstone showcase without multi-tenant authentication, user sessions, or row-level access control.
+2. **Local Storage Reality Check**: Local disk storage and local Floci emulator containers reside on the same physical host machine. They do **not** provide off-site disaster recovery or geographical redundancy unless backup archives are replicated to secondary physical media or remote cold storage.
+3. **Database Concurrency**: While SQLite WAL mode supports multi-reader concurrency, write operations are serialized through a single writer lock.
+4. **Windows Named Pipe Boundary**: In sandboxed automation environments running at Low Mandatory Level, connecting to Docker Desktop's named pipe requires standard user privileges (`docker-users` group membership).
 
 ---
 
-### Primary Option: GitHub Actions CI Pipeline (Strict ₹0 Cost)
+## 🔮 19. Future Improvements
 
-The repository provides a cloud-native GitHub Actions workflow defined in [.github/workflows/ci.yml](file:///c:/antigravity_projects/cloud_backup_system/.github/workflows/ci.yml). It executes automatically on pushes and pull requests to `main`, and supports parameterized manual triggers via `workflow_dispatch`.
-
-For comprehensive operational instructions, billing limit guidance, and step-by-step verification, see:  
-👉 **[GitHub Actions CI/CD Architecture & Setup Guide](file:///c:/antigravity_projects/cloud_backup_system/docs/github-actions-ci.md)**
-
-#### Key Highlights & ₹0 Cost Safeguards:
-- **Runner Environment**: Standard GitHub-hosted `ubuntu-latest` Linux runners.
-- **Strict ₹0 Budget Compliance**: Operates entirely within GitHub's included monthly allowance (2,000 minutes/month for private repos; unlimited for public repos).
-- **Least-Privilege Security**: Configured with `permissions: contents: read` and no exposed secrets.
-- **Fail-Fast Timeouts**: Enforces `timeout-minutes: 10` on each job to prevent runaway processes.
-- **Concurrency Control**: Automatically cancels obsolete in-progress builds when newer commits are pushed.
-- **Zero Artifact Storage Overhead**: Does not upload unnecessary build artifacts, keeping included storage clean.
-- **Zero Deployment Leaks**: Builds container images and frontend bundles purely for compile-time validation; never pushes to registries or deploys to cloud servers.
-
-#### Workflow Jobs & Quality Gates:
-1. **Backend Verification (`backend`)**:
-   - Sets up Python 3.12 with pip cache.
-   - Installs dependencies from `backend/requirements.txt`.
-   - Executes 47 pytest test items: **45 passed, 2 legitimately skipped** (live Floci tests skip gracefully when the emulator is offline).
-2. **Frontend Verification (`frontend`)**:
-   - Sets up Node.js 20 LTS with npm cache.
-   - Executes strict reproducible `npm ci` from `frontend/package-lock.json`.
-   - Runs 19 Vitest unit and component tests across 5 test suites (**19 passed, 0 errors**).
-   - Compiles TypeScript and builds production distribution bundle (`tsc -b && vite build`), asserting presence of `dist/index.html`.
-3. **Docker Compose & Container Build Verification (`docker-validation`)**:
-   - Validates `docker compose config` for both default local and `--profile s3` Floci configurations.
-   - Builds local container images (`cloud-backup-backend:ci` and `cloud-backup-frontend:ci`) to ensure build reproducibility.
-4. **Optional Floci S3 Live Integration (`floci-integration`)**:
-   - Opt-in parameter via `workflow_dispatch` (`run_floci_integration = true`).
-   - Spins up local Floci container, validates health on port 4566, runs live S3 tests, and cleanly stops container.
+- **Multi-Tenant User Authentication**: Implementation of Argon2id password hashing, JWT bearer tokens, and user-isolated file ownership.
+- **Scheduled Automated Backups**: Background cron scheduler to trigger point-in-time snapshots and archive exports automatically.
+- **Webhook Alerts**: Outbound webhook notifications on backup success or storage quota warnings.
+- **Chunked Resumable Uploads**: Support for chunked multipart uploads for large files (>50 MB).
 
 ---
 
-### Alternative / Historical Option: Local Jenkins CI/CD Pipeline
+## 📄 20. License & Acknowledgements
 
-The project also maintains a production-grade Declarative Jenkins Pipeline defined in [Jenkinsfile](file:///c:/antigravity_projects/cloud_backup_system/Jenkinsfile) as an offline, self-hosted CI alternative.
+### Project Evaluation Notice
+This project was designed, developed, and tested as an academic capstone project and DevOps portfolio demonstration.
+- **License Status**: No open-source license is provided for this repository. All rights remain with their respective copyright holders. Intended for academic evaluation and portfolio demonstration.
 
-For the Jenkins configuration guide, tool matrix, plugin recommendations, and setup instructions, see:  
-👉 **[Jenkins CI/CD Architecture & Setup Guide](file:///c:/antigravity_projects/cloud_backup_system/docs/jenkins-ci-cd.md)**
-
-> [!NOTE]
-> **Jenkins Verification Status**: The Declarative `Jenkinsfile`, parameterization, and Groovy syntax validation have been verified using Jenkins' internal compilation engine. Actual Jenkins pipeline job execution in the Jenkins UI and Windows service-account Docker socket troubleshooting have been intentionally deferred in favor of the turnkey GitHub Actions workflow. No live build run in Jenkins has been claimed.
-
----
-
-## 🔧 Troubleshooting & Diagnostics
-
-| Symptom | Probable Cause | Recommended Resolution |
-| :--- | :--- | :--- |
-| **Port 8000 Conflict** | Another process is using port 8000. | Check process via PowerShell: `Get-NetTCPConnection -LocalPort 8000`. Terminate conflicting process or set `PORT=8001` in `.env`. |
-| **Port 5173 Conflict** | Vite or previous node instance active. | Stop orphaned node processes: `Stop-Process -Name node -Force -ErrorAction SilentlyContinue`. |
-| **Storage Provider Degraded** | Floci emulator is offline while `STORAGE_PROVIDER=s3`. | Start Floci via `docker compose --profile s3 up -d floci` or switch back to `STORAGE_PROVIDER=local` in `.env`. |
-| **Docker Named Pipe Blocked** | Windows background service running as `LocalSystem` lacks access to Docker Desktop. | Run Jenkins job under the desktop user account or launch an inbound agent in your desktop session. |
-| **Data Missing After Restart** | Accidental `docker compose down -v`. | Avoid `-v` flag. Always stop containers with `docker compose stop`. |
-
----
-
-## 🔒 Security & Scope Limitations
-
-1. **Path Traversal Protection**: Directory traversal (`../../`) and absolute paths are rejected.
-2. **Device Name Filter**: Windows reserved filenames (`CON`, `PRN`, `AUX`, `NUL`, etc.) are blocked.
-3. **Immutable History**: Historical object keys cannot be overwritten. Uploading a revised file creates a new unique key and increments the version counter.
-4. **Data Isolation**: Internal disk paths are masked in API outputs.
-5. **Scope Notice**: Designed as a single-user local demonstration system without multi-user authentication.
-
----
-
-## 🏁 Phase 8 Final Release Verification Checklist
-
-This reproducible checklist verifies the entire system across backend, frontend, isolated recovery, and Docker layers.
-
-### 1. Execute All Automated Tests (Zero Running Services Required)
-
-```powershell
-# A. Run full backend pytest test suite (45 passed, 2 skipped when Floci offline)
-python -m pytest backend/tests -v
-
-# B. Run genuine isolated portable archive recovery audit (8/8 steps passed)
-python scripts/verify-archive-recovery.py
-
-# C. Run frontend Vitest test suite (19 passed across 5 test suites)
-cd frontend
-cmd /c npm test
-cd ..
-
-# D. Validate frontend production TypeScript compilation & bundle build
-cd frontend
-cmd /c npm run build
-cd ..
-```
-
-### 2. Validate Container Orchestration & Build Container Images
-
-```powershell
-# A. Validate default Compose specification (local filesystem mode)
-docker compose config --quiet
-
-# B. Validate multi-container Compose specification with S3 profile (Floci mode)
-docker compose --profile s3 config --quiet
-
-# C. Build production container images for backend and frontend
-docker compose build
-```
-
-### 3. Launching Application & Live Verification
-
-#### Local Mode (Default, Zero Container Dependencies)
-```powershell
-# Launch backend and frontend dev servers locally
-.\scripts\start-local.ps1
-
-# In another terminal, run live end-to-end smoke test against running server
-.\scripts\smoke-test.ps1
-```
-
-#### Floci S3-Compatible Mode (Local Containerized S3 Emulator)
-```powershell
-# Start Floci container with persistent Docker volume
-docker compose --profile s3 up -d floci
-
-# Verify Floci emulator health
-Invoke-RestMethod -Uri "http://localhost:4566/_floci/health"
-
-# Run Floci live integration tests
-python -m pytest backend/tests/test_floci_integration.py -v
-
-# Stop Floci without deleting persistent volume
-docker compose stop floci
-```
-
----
-
-### 4. Integration Verification Summary Matrix
-
-| Subsystem / Layer | Verification Method | Status | Notes |
-| :--- | :--- | :--- | :--- |
-| **Backend Core & Storage** | `pytest backend/tests` | ✅ **45 passed, 2 skipped** | Local disk default; unit mocks cover S3 driver; live Floci skipped when offline. |
-| **Isolated Archive Recovery** | `python scripts/verify-archive-recovery.py` | ✅ **8/8 steps passed** | Genuine disaster recovery verified in isolated temporary workspace; byte-for-byte verified. |
-| **Frontend UI & Tests** | `vitest run` & `tsc -b && vite build` | ✅ **19 passed, 0 errors** | File inventory, version drawer, snapshots, and archive operations verified. |
-| **Docker Compose Config** | `docker compose config` | ✅ **Validated** | Default and `--profile s3` validated. |
-| **Container Images** | `docker compose build` | ✅ **Built** | `cloud_backup_system-backend` and `cloud_backup_system-frontend` built cleanly. |
-| **GitHub Actions CI** | PyYAML validation & local test suite | ✅ **Validated** | `.github/workflows/ci.yml` syntax validated; 3 parallel jobs; strict ₹0 budget safeguards. |
-| **Jenkins CI/CD** | Groovy syntax & declarative compilation | ⏸️ **Syntax Validated** | Live pipeline job execution in Jenkins UI deferred in favor of GitHub Actions. |
-
+### Open-Source Acknowledgements
+Special thanks to the open-source projects and communities powering this platform:
+- **FastAPI** & **Starlette** (Sebastián Ramírez)
+- **React** (Meta Platforms, Inc.)
+- **Vite** (Evan You & Vite Contributors)
+- **Tailwind CSS** (Tailwind Labs)
+- **SQLite** (D. Richard Hipp & SQLite Team)
+- **Floci** (Floci Open Source Project & Contributors)
+- **boto3** (Amazon Web Services)
+- **pytest** & **Vitest** testing communities
